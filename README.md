@@ -31,15 +31,16 @@ go build server.go
 curl http://localhost/hello
 > Hello
 ```
-go通过监听指定端口，接管了所有请求数据，不需要额外的http服务器以及web容器的支持，由于goroutine的存在，这种方式的服务性能理论上完全不亚于nginx。
+通过上面的实践可以发现，go通过监听指定端口，接管了所有请求数据，不需要额外的http服务器以及web容器的支持。
 # Path
 TODO 定义在一个文件中，与参数一起作为服务文档，同时还要研究限制返回数据的方案。
 # Param
 TODO 主要是参数校验，支持各种类型参数校验。
 # Mysql
 TODO 主要考虑在不使用orm的前提下如何防止sql注入
-# MVC
-TODO 通过例子展示一种MVC组织方案
+TODO 研究一种支持mysql prepare的第三方库
+# AOP
+TODO 通过例子展示一种AOP形式的代码组织方案
 # Log
 TODO 考虑日志分级输出可配置、输出路径可配置、大小限制可切分等
 # Online
