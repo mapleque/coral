@@ -8,7 +8,7 @@
 ## go web的现状
 ## go web的目标
 # Base
-go是一种天生支持并发的语言，以至于通过net/http包实现web服务只需要简单几行代码。
+go的http包支持快速搭建一个web server。
 ```
 package main
 
@@ -32,20 +32,34 @@ curl http://localhost/hello
 > Hello
 ```
 通过上面的实践可以发现，go通过监听指定端口，接管了所有请求数据，不需要额外的http服务器以及web容器的支持。
-# Server
-Server是框架的核心类，用户可以通过Server类创建服务实例server，每个server都可以指定一个监听端口提供web服务。
+# Server & Router
+每个server都可以指定一个监听端口提供web服务。
 ```
-server := Server.Listen(":80")
+server := common.NewServer()
 ```
-server提供了router方法，可以为每个指定的Path定义不同的处理策略，该方法将会返回Router对象实例router，router可以进一步被设置
+router可以为每个指定的Path定义不同的处理策略。
 ```
-router := server.router("/")
+router := common.NewRouter("/", api.Index)
 ```
-# Context
-Context对象是请求处理过程中贯穿始终的上下文数据，用户在使用框架的任何位置都可以轻松获得当前Context实例，并对其中数据加工处理。
-# Path
-TODO 定义在一个文件中，与参数一起作为服务文档，同时还要研究限制返回数据的方案。
+最后需要将router添加到server中，并启动server
 ```
+server.AddRoute(router)
+server.Run()
+```
+# Filter & Context
+Filter是api接管请求，添加进一步逻辑处理的入口，对于每个Filter方法，都有一个Context对象作为参数。
+Context对象是请求处理过程中贯穿始终的上下文数据，用户在使用框架的任何filter中都可以对其中数据加工处理。
+框架最终会将Context对象中的response返回给请求者。
+```
+package api
+
+import (
+	. "coral/common"
+)
+
+func Index(context *Context) {
+	context.Response = "hello coral"
+}
 ```
 # Param
 TODO 主要是参数校验，支持各种类型参数校验。
