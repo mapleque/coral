@@ -37,19 +37,26 @@ curl http://localhost/hello
 ```
 server := common.NewServer()
 ```
-router可以为每个指定的Path定义不同的处理策略。
+server和router都提供了NewRouter方法，可以为每个指定的Path定义不同的处理策略。router同样也支持链式处理策略，这个在后面的部分将会被看到。
 ```
-router := common.NewRouter("/", api.Index)
+// curl http://localhost:8080/
+// hello coral
+baseRouter := server.NewRouter("/", api.Index)
+
+// curl http://localhost:8080/param?<params>
+// <params>
+paramRouter := baseRouter.NewRouter("param", api.Param)
 ```
-最后需要将router添加到server中，并启动server
+其中由router创建的router属于子路径，path将会自动加上父router的path。
+最后启动server。
 ```
-server.AddRoute(router)
 server.Run()
 ```
 # Filter & Context
 Filter是api接管请求，添加进一步逻辑处理的入口，对于每个Filter方法，都有一个Context对象作为参数。
+当Filter返回false时，系统将不在处理后面的filter，直接给用户返回数据。
 Context对象是请求处理过程中贯穿始终的上下文数据，用户在使用框架的任何filter中都可以对其中数据加工处理。
-框架最终会将Context对象中的response返回给请求者。
+系统最终会将Context对象中的Status,Data,Errmsg返回给请求者。
 ```
 package api
 
@@ -58,11 +65,27 @@ import (
 )
 
 func Index(context *Context) {
-	context.Response = "hello coral"
+	context.Data = "hello coral"
+    return true
+}
+
+func Param(context *Context) bool {
+	context.Data = context.Params
+	return true
 }
 ```
 # Param
-TODO 主要是参数校验，支持各种类型参数校验。
+validator提供了基本参数校验方法以及一些列用于校验的方法。
+```
+r := &R{}
+
+// curl http://localhost:8080/param/check?a=1&b=2&c=1
+// {"a":"1", "b":2, "c":"1"}
+paramRouter.NewRouter("check", r.Check(V{"a": r.IsString, "b": r.IsInt, "c": r.IsBool}), api.Param)
+```
+事实上，http包对于从请求获取的参数，都是string类型，因此在参数校验的方法里边，特意加入了强制类型转换逻辑，校验方法会根据用户所要求的类型尝试转换参数，如果成功就赋值给context.Params否则直接返回参数错误提示。这样一来，用户在自己的Filter中就可以直接使用期望的参数类型了。
+这里的check方法，实际上返回的就是一个Filter，因此用户完全可以自己实现参数校验，就像Filter所干的事情一样。
+值得注意的是，这里使用了前面提到的router对Filter的链式调用。
 # Mysql
 TODO 主要考虑在不使用orm的前提下如何防止sql注入
 TODO 研究一种支持mysql prepare的第三方库
