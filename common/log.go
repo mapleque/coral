@@ -16,7 +16,8 @@ type logInfo []interface{}
 
 // 全部日志的基本输出格式定义
 func log(msg ...interface{}) {
-	fmt.Println(time.Now().Format("2016-01-01 01:01:01.000"), msg[0], msg[1])
+	msg = append(logInfo{time.Now().Format(time.RFC3339)}, msg...)
+	fmt.Println(msg...)
 }
 
 // Info log
