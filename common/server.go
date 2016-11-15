@@ -28,17 +28,16 @@ func (server *Server) AddRoute(router *Router) {
 // registerRouters 注册所有已添加的router
 func (server *Server) registerRouters() {
 	for _, router := range server.routers {
-		server.registerRouter("", router)
+		server.registerRouter(router)
 	}
 }
 
 // registerRouter 递归注册指定的一个router
-func (server *Server) registerRouter(path string, router *Router) {
-	curPath := path + router.path
-	Info("register router " + curPath)
-	server.mux.HandleFunc(curPath, router.handler)
+func (server *Server) registerRouter(router *Router) {
+	Info("register router " + router.path)
+	server.mux.HandleFunc(router.path, router.handler)
 	for _, child := range router.routers {
-		server.registerRouter(curPath, child)
+		server.registerRouter(child)
 	}
 }
 
@@ -49,6 +48,6 @@ func (server *Server) Run() {
 	err := http.ListenAndServe(server.host, server.mux)
 	if err != nil {
 		Error(err)
+		Error("server start FAILD!")
 	}
-	Info("server start OK!")
 }
