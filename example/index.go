@@ -32,6 +32,9 @@ func initRouter(server *coral.Server) {
 	)
 	// TODO 更复杂的check
 
+	// log
+	baseRouter.NewRouter("log", filter.Log)
+
 	// /mysql
 	mysqlRouter := baseRouter.NewRouter("mysql", filter.Mysql)
 	// /mysql/select

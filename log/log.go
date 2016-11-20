@@ -1,22 +1,33 @@
 package log
 
-/**
- * log模块封装，用于整个框架中任何地方输出log
- * 在需要的位置使用Info,Debug,Warn,Error即可输出log
- * 各级别日志将根据配置灵活输出
- */
+// log模块封装，用于整个框架中任何地方
+// 实现了日志指定大小和自动切分，日志分级输出等，参考配置文件选项
+//
+// import本包后直接使用各级别日志输出方法输出日志
+// 日志将会被输出到所有已经添加到日志池的满足条件的logger
+// 如果想指定输出的logger可以用Log.Pool[name].Debug等方法
+//
+// Debug 有callstack，可指定logger
+// Info 可指定logger
+// Warn 有callstack，可指定logger
+// Error 有callstack，可指定logger
+// Fatal 有callstack，且服务会停止
+// Callstack 直接输出当前callstack，可指定logger
 
 import (
 	"log"
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 )
 
+// LEVEL 日志级别类型
 type LEVEL int32
 
 const (
+	// 0 - 5
 	ALL LEVEL = iota
 	DEBUG
 	INFO
@@ -25,32 +36,37 @@ const (
 	FATAL
 )
 
+// LogPool 日志池对象
 type LogPool struct {
 	Pool map[string]*Logger
 }
 
+// Logger 日志对象
 type Logger struct {
-	path      string
-	filename  string
-	logFile   *os.File
-	maxLevel  LEVEL
-	minLevel  LEVEL
-	maxNumber int32
-	maxSize   int64
+	path      string // 日志输出路径
+	filename  string // 日志输出文件名
+	maxLevel  LEVEL  // 日志接受的最高级别
+	minLevel  LEVEL  // 日志接受的最低级别
+	maxNumber int32  // 日志最大文件数，超过则循环替代
+	maxSize   int64  // 日志单个文件最大size，单位byte
 
-	suffix int32
-	mux    *sync.RWMutex
-	logger *log.Logger
+	suffix  int32         // 当前rotate后缀
+	mux     *sync.RWMutex // 并发锁
+	logFile *os.File      // 日志文件指针
+	logger  *log.Logger   // go的logger指针
 }
 
+// Log 全局变量
 var Log *LogPool
 
+// InitLog 方法，初始化日志池，并返回Log对象
 func InitLog() *LogPool {
 	Log = &LogPool{}
 	Log.Pool = make(map[string]*Logger)
 	return Log
 }
 
+// 增加一个日志输出模块
 func (lp *LogPool) AddLogger(
 	name, path string,
 	maxNumber int32, maxSize int64,
@@ -85,6 +101,7 @@ func baseLog(level LEVEL, prefix string, msg ...interface{}) {
 
 func Debug(msg ...interface{}) {
 	baseLog(DEBUG, "[DEBUG]", msg...)
+	Callstack()
 }
 
 func Info(msg ...interface{}) {
@@ -123,6 +140,43 @@ func (lp *LogPool) log(level LEVEL, msg ...interface{}) {
 			logger.logger.Println(msg...)
 		}
 	}
+}
+
+func (lg *Logger) Debug(msg ...interface{}) {
+	lg.log(DEBUG, "[DEBUG]", msg...)
+	lg.Callstack()
+}
+
+func (lg *Logger) Info(msg ...interface{}) {
+	lg.log(INFO, "[INFO]", msg...)
+}
+
+func (lg *Logger) Warn(msg ...interface{}) {
+	lg.log(WARN, "[WARN]", msg...)
+	lg.Callstack()
+}
+
+func (lg *Logger) Error(msg ...interface{}) {
+	lg.log(ERROR, "[ERROR]", msg...)
+	lg.Callstack()
+}
+
+func (lg *Logger) Callstack() {
+	msg := getCallstack()
+	lg.log(ALL, "", msg...)
+}
+
+func (logger *Logger) log(level LEVEL, prefix string, msg ...interface{}) {
+	msg = append(logInfo{prefix}, msg...)
+	if logger.logger != nil &&
+		((logger.maxLevel >= level && logger.minLevel <= level) ||
+			level == ALL) {
+		logger.rotate()
+		logger.mux.RLock()
+		defer logger.mux.RUnlock()
+		logger.logger.Println(msg...)
+	}
+	log.Println(msg...)
 }
 
 func (lg *Logger) rotate() {
@@ -179,12 +233,27 @@ func openFile(path, filename string) *os.File {
 // callstack
 func getCallstack() []interface{} {
 	var callstack []interface{}
+	callstack = append(callstack, "Callstack:\n") // start with a new line
 	for skip := 0; ; skip++ {
 		_, file, line, ok := runtime.Caller(skip)
 		if !ok {
 			break
 		}
-		callstack = append(callstack, file+":"+strconv.Itoa(line)+"\n")
+		// remove program and framework callstack
+		if !isFilterCallstack(file) {
+			callstack = append(callstack, file+":"+strconv.Itoa(line)+"\n")
+		}
 	}
-	return callstack[:len(callstack)-2]
+	return callstack
+}
+
+func isFilterCallstack(file string) bool {
+	if strings.Contains(file, "/coral/example") {
+		return false
+	}
+	if strings.Contains(file, "/coral/") ||
+		strings.Contains(file, "/golang/src/") {
+		return true
+	}
+	return false
 }

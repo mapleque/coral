@@ -92,6 +92,34 @@ func Select(context *Context) bool {
 TODO 批量操作mysql用prepare
 TODO 事物
 ```
+# Redis
+// TODO Redis封装
 # Log
-TODO 考虑日志分级输出可配置、输出路径可配置、大小限制可切分等
-TODO logger的用法
+Log模块实现了日志分级输出，日志文件限制大小，自动循环切分等。
+其用法与db模块类似，在启动server的时候初始化一次，在程序中使用全局变量Log或者全局方法Info等输出日志。
+```
+func initLog() {
+	logPool := log.InitLog()
+	logPool.AddLogger(
+		config.DEFAULT_LOG,
+		config.DEFAULT_LOG_PATH,
+		config.DEFAULT_LOG_MAX_NUMBER,
+		config.DEFAULT_LOG_MAX_SIZE,
+		config.DEFAULT_LOG_MAX_LEVEL,
+		config.DEFAULT_LOG_MIN_LEVEL)
+    // add other logger
+    // ...
+}
+```
+添加log的路由：
+```
+	// log
+	baseRouter.NewRouter("log", filter.Log)
+```
+实现对应的filter
+```
+func Log(context *Context) bool {
+	log.Debug(context.Params)
+	return true
+}
+```
