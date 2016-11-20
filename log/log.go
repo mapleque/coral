@@ -186,5 +186,5 @@ func getCallstack() []interface{} {
 		}
 		callstack = append(callstack, file+":"+strconv.Itoa(line)+"\n")
 	}
-	return callstack
+	return callstack[:len(callstack)-2]
 }
