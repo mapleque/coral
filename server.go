@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	. "coral/log"
+	. "github.com/coral/log"
 )
 
 // Server是一个服务的对象定义，一个server对应一个端口监听
@@ -54,6 +54,7 @@ type Response struct {
 
 // NewServer返回一个Server对象引用
 func NewServer(host string) *Server {
+	Info("========================================")
 	Info("server start now ... ")
 	server := &Server{}
 	server.mux = http.NewServeMux()
@@ -70,6 +71,7 @@ func (server *Server) AddRoute(router *Router) {
 func (server *Server) Run() {
 	server.registerRouters()
 	Info("server listening on " + server.host)
+	Info("========================================")
 	err := http.ListenAndServe(server.host, server.mux)
 	if err != nil {
 		Error(err)

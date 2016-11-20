@@ -1,32 +1,30 @@
 package main
 
 import (
-	. "github.com/coral"                     // common package
-	db "github.com/coral/db"                 // db package
-	config "github.com/coral/example/config" // config package
-	. "github.com/coral/example/constant"    // constant package
-	filter "github.com/coral/example/filter" // filter package
+	coral "github.com/coral"
+	db "github.com/coral/db"
+	log "github.com/coral/log"
+
+	config "github.com/coral/example/config"
+	filter "github.com/coral/example/filter"
 )
 
 /**
  * initRouter 方法，定义服务全部接口、参数校验、并指定过滤器链
  */
-func initRouter(server *Server) {
+func initRouter(server *coral.Server) {
 	// r for param check
-	r := &R{}
+	r := &coral.R{}
 
-	// curl http://localhost:8080/
-	// hello coral
+	// /
 	baseRouter := server.NewRouter("/", filter.Index)
 
-	// curl http://localhost:8080/param?<params>
-	// <params>
+	// /param?<params>
 	paramRouter := baseRouter.NewRouter("param", filter.Param)
-	// curl http://localhost:8080/param/check?a=1&b=2&c=1
-	// {"a":"1", "b":2, "c":"1"}
+	// /param/check?a=1&b=2&c=1
 	paramRouter.NewRouter(
 		"check",
-		r.Check(V{
+		r.Check(coral.V{
 			"a": r.IsString,
 			"b": r.IsInt,
 			"c": r.IsBool}),
@@ -34,12 +32,19 @@ func initRouter(server *Server) {
 	)
 	// TODO 更复杂的check
 
-	// curl http://localhost:8080/mysql
-	// something happend
+	// /mysql
 	mysqlRouter := baseRouter.NewRouter("mysql", filter.Mysql)
+	// /mysql/select
 	mysqlRouter.NewRouter("select", filter.Select)
+	// /mysql/insert
 	mysqlRouter.NewRouter("insert", filter.Insert)
+	// /mysql/update
 	mysqlRouter.NewRouter("update", filter.Update)
+
+	// /redis
+	redisRouter := baseRouter.NewRouter("redis", filter.Redis)
+	redisRouter.NewRouter("set", filter.Set)
+	redisRouter.NewRouter("get", filter.Get)
 }
 
 func initDB() {
@@ -47,7 +52,7 @@ func initDB() {
 	dbPool := db.InitDB()
 	// add default db
 	dbPool.AddDB(
-		DEF_DEFAULT_DB,
+		config.DEFAULT_DB,
 		config.DEFAULT_DB_DSN,
 		config.DEFAULT_DB_MAX_CONNECTION,
 		config.DEFAULT_DB_MAX_IDLE)
@@ -56,14 +61,29 @@ func initDB() {
 	// ...
 }
 
+func initLog() {
+	logPool := log.InitLog()
+	logPool.AddLogger(
+		config.DEFAULT_LOG,
+		config.DEFAULT_LOG_PATH,
+		config.DEFAULT_LOG_MAX_NUMBER,
+		config.DEFAULT_LOG_MAX_SIZE,
+		config.DEFAULT_LOG_MAX_LEVEL,
+		config.DEFAULT_LOG_MIN_LEVEL)
+}
+
 func main() {
-	// new server
-	server := NewServer(config.HOST)
-	// new router
-	initRouter(server)
+	// init log
+	initLog()
 
 	// init db
 	initDB()
+
+	// new server
+	server := coral.NewServer(config.HOST)
+
+	// new router
+	initRouter(server)
 
 	// start server
 	server.Run()

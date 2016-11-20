@@ -1,41 +1,10 @@
 # Abstract
-本文主要阐述了一个go web框架的实现理念和使用方法。这一框架更适合作为服务端基础数据服务，通过json协议包装request和response，抛弃了模板这一为了前端表现而存在的妥协产物（因为前端的事情完全可以交给更专业的javascript来完成），从而使得框架更轻更纯粹，也更容易维护。
-所谓web服务，path和param是入口，所以实现路由策略和参数校验功能是web框架必不可少的。而数据持久化是数据服务的核心，为了使框架简洁，本文仅以最常用的mysql数据库作为数据持久化实现方法示例，如果有不同的需要，读者完全可以在此基础上实现个人的数据持久化方法。
-对于代码编写者而言，良好的组织架构总是能产生事半功倍的效果，本文介绍了如何以MVC的组织方式实现一个服务。此外，本文后半部分还涉及了生产环境部署相关问题。
-# Introduce
-## go web的优势
-## go web的劣势
-## go web的现状
-## go web的目标
-# Base
-go的http包支持快速搭建一个web server。
-```
-package main
-
-import (
-    "net/http"
-)
-
-func sayHello(w http.ResponseWriter, req *http.Request) {
-    w.Write([]byte("Hello"))
-}
-
-func main() {
-    http.HandleFunc("/hello", sayHello)
-    http.ListenAndServe(":80", nil)
-}
-```
-```
-go build server.go
-./server
-curl http://localhost/hello
-> Hello
-```
-通过上面的实践可以发现，go通过监听指定端口，接管了所有请求数据，不需要额外的http服务器以及web容器的支持。
+本文主要阐述了coral框架的实现理念和使用方法。这一基于go实现的超轻量级框架更适合作为服务端基础数据服务使用，它抛弃了模板这一为了前端表现而存在的妥协产物（因为前端的事情完全可以交给更专业的javascript来完成），通过json协议包装request和response，从而使得框架更轻更纯粹，也更容易维护。
+coral实现了路由和路由组的包装，实现了参数校验和过滤器链，另外还利用go的log模块和database模块实现了日志和数据库插件。
 # Server & Router
 每个server都可以指定一个监听端口提供web服务。
 ```
-server := common.NewServer()
+server := coral.NewServer(":8080")
 ```
 server和router都提供了NewRouter方法，可以为每个指定的Path定义不同的处理策略。router同样也支持链式处理策略，这个在后面的部分将会被看到。
 ```
@@ -75,7 +44,7 @@ func Param(context *Context) bool {
 }
 ```
 # Param
-validator提供了基本参数校验方法以及一些列用于校验的方法。
+coral提供了基本参数校验方法以及一些列用于校验的方法。
 ```
 r := &R{}
 
@@ -87,11 +56,42 @@ paramRouter.NewRouter("check", r.Check(V{"a": r.IsString, "b": r.IsInt, "c": r.I
 这里的check方法，实际上返回的就是一个Filter，因此用户完全可以自己实现参数校验，就像Filter所干的事情一样。
 值得注意的是，这里使用了前面提到的router对Filter的链式调用。
 # Mysql
-TODO 主要考虑在不使用orm的前提下如何防止sql注入
-TODO 研究一种支持mysql prepare的第三方库
-# AOP
-TODO 通过例子展示一种AOP形式的代码组织方案
+Mysql驱动选用了github.com/go-sql-driver/mysql，框架db包对其操作进行了封装，用户需要在启动server之前初始化并添加自己的DB，然后通过一个全局变量DB就可以调用对应sql方法进行数据库操作。
+```
+// 初始化db的方法，在启动server的时候调用一次即可
+func initDB() {
+	// init db pool
+	dbPool := db.InitDB()
+	// add default db
+	dbPool.AddDB(
+		DEF_DEFAULT_DB,
+		config.DEFAULT_DB_DSN,
+		config.DEFAULT_DB_MAX_CONNECTION,
+		config.DEFAULT_DB_MAX_IDLE)
+
+	// add other db
+	// ...
+}
+```
+```
+// 在router中添加mysql操作的路由和filter
+	// /mysql
+	mysqlRouter := baseRouter.NewRouter("mysql", filter.Mysql)
+	// /mysql/select
+	mysqlRouter.NewRouter("select", filter.Select)
+```
+```
+// 对应的mysql操作的filter方法
+func Select(context *Context) bool {
+	context.Data = DB.Select(
+		DEF_DEFAULT_DB,
+		"SELECT * FROM user WHERE id = ?",
+		1)
+	return true
+}
+TODO 批量操作mysql用prepare
+TODO 事物
+```
 # Log
 TODO 考虑日志分级输出可配置、输出路径可配置、大小限制可切分等
-# Online
-TODO 考虑如何保证服务性能、稳定性、上线流程等
+TODO logger的用法
