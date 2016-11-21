@@ -2,6 +2,7 @@ package main
 
 import (
 	coral "github.com/coral"
+	cache "github.com/coral/cache"
 	db "github.com/coral/db"
 	log "github.com/coral/log"
 
@@ -64,8 +65,25 @@ func initDB() {
 	// ...
 }
 
+func initRedis() {
+	// init cache pool
+	cachePool := cache.InitCache()
+	// add default cache
+	cachePool.AddRedis(
+		config.DEFAULT_REDIS,
+		config.DEFAULT_REDIS_SERVER,
+		config.DEFAULT_REDIS_AUTH,
+		config.DEFAULT_REDIS_MAX_CONNECTION,
+		config.DEFAULT_REDIS_MAX_IDLE)
+
+	// add other cache
+	// ...
+}
+
 func initLog() {
+	// init log pool
 	logPool := log.InitLog()
+	// add default logger
 	logPool.AddLogger(
 		config.DEFAULT_LOG,
 		config.DEFAULT_LOG_PATH,
@@ -73,6 +91,9 @@ func initLog() {
 		config.DEFAULT_LOG_MAX_SIZE,
 		config.DEFAULT_LOG_MAX_LEVEL,
 		config.DEFAULT_LOG_MIN_LEVEL)
+
+	// add other logger
+	// ...
 }
 
 func main() {
@@ -81,6 +102,9 @@ func main() {
 
 	// init db
 	initDB()
+
+	// init redis
+	initRedis()
 
 	// new server
 	server := coral.NewServer(config.HOST)

@@ -248,11 +248,13 @@ func getCallstack() []interface{} {
 }
 
 func isFilterCallstack(file string) bool {
-	if strings.Contains(file, "/coral/example") {
-		return false
-	}
-	if strings.Contains(file, "/coral/") ||
-		strings.Contains(file, "/golang/src/") {
+	/*
+		if strings.Contains(file, "/coral/") ||
+			strings.Contains(file, "/golang/src/") {
+			return true
+		}
+	*/
+	if strings.Contains(file, "/golang/src/") {
 		return true
 	}
 	return false
