@@ -1,0 +1,6 @@
+package config
+
+const HOST = "0.0.0.0:8080"
+const DEFAULT_DB_DSN = "user:pass@tcp(dbhost:port)/dbname"
+const DEFAULT_DB_MAX_CONNECTION = 10
+const DEFAULT_DB_MAX_IDLE = 10
