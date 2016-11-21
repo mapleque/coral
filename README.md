@@ -89,7 +89,6 @@ func Select(context *Context) bool {
 		1)
 	return true
 }
-TODO 返回数据类型断言
 TODO 批量操作mysql用prepare
 TODO 事物
 ```
@@ -136,7 +135,6 @@ func Get(context *Context) bool {
 	return true
 }
 ```
-TODO 返回数据类型断言
 # Log
 Log模块实现了日志分级输出，日志文件限制大小，自动循环切分等。
 其用法与db模块类似，在启动server的时候初始化一次，在程序中使用全局变量Log或者全局方法Info等输出日志。
