@@ -73,15 +73,15 @@ func initDB() {
 	// ...
 }
 ```
+在router中添加mysql操作的路由
 ```
-// 在router中添加mysql操作的路由和filter
 	// /mysql
 	mysqlRouter := baseRouter.NewRouter("mysql", filter.Mysql)
 	// /mysql/select
 	mysqlRouter.NewRouter("select", filter.Select)
 ```
+实现对应的filter
 ```
-// 对应的mysql操作的filter方法
 func Select(context *Context) bool {
 	context.Data = DB.Select(
 		DEF_DEFAULT_DB,
@@ -93,7 +93,48 @@ TODO 批量操作mysql用prepare
 TODO 事物
 ```
 # Redis
-// TODO Redis封装
+Redis驱动选用了github.com/garyburd/redigo/redis，框架cache包对其进行了封装，用户需要再启动server之前初始化并添加自己的redis，然后通过全局变量Cache就可以调用Set或者Get进行操作。
+```
+func initRedis() {
+	// init cache pool
+	cachePool := cache.InitCache()
+	// add default cache
+	cachePool.AddRedis(
+		config.DEFAULT_REDIS,
+		config.DEFAULT_REDIS_SERVER,
+		config.DEFAULT_REDIS_AUTH,
+		config.DEFAULT_REDIS_MAX_CONNECTION,
+		config.DEFAULT_REDIS_MAX_IDLE)
+
+	// add other cache
+	// ...
+}
+```
+添加redis路由
+```
+	// /redis
+	redisRouter := baseRouter.NewRouter("redis", filter.Redis)
+	redisRouter.NewRouter("set", filter.Set)
+	redisRouter.NewRouter("get", filter.Get)
+```
+实现对应的filter
+```
+func Set(context *Context) bool {
+	param := context.Params
+	key := param["key"].(string)
+	val := param["val"]
+	ret := Cache.Set(DEFAULT_REDIS, key, val)
+	context.Data = ret
+	return true
+}
+
+func Get(context *Context) bool {
+	param := context.Params
+	key := param["key"].(string)
+	context.Data = Cache.Get(DEFAULT_REDIS, key)
+	return true
+}
+```
 # Log
 Log模块实现了日志分级输出，日志文件限制大小，自动循环切分等。
 其用法与db模块类似，在启动server的时候初始化一次，在程序中使用全局变量Log或者全局方法Info等输出日志。
