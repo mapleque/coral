@@ -14,7 +14,7 @@ func Mysql(context *Context) bool {
 func Insert(context *Context) bool {
 	ret := DB.Insert(
 		DEFAULT_DB,
-		"INSERT INTO user (username,password) VALUSES (?,?)",
+		"INSERT INTO user (username,password) VALUES (?,?)",
 		"aaa", "aaa")
 	context.Data = ret
 	return true
