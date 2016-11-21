@@ -1,0 +1,10 @@
+CREATE TABLE coral(
+id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+name VARCHAR(32),
+type CHAR(1),
+status TINYINT(1),
+flag BOOLEAN,
+rate FLOAT,
+additional TEXT,
+time DATETIME
+)CHARSET=utf8;
