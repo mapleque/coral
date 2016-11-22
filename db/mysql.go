@@ -153,6 +153,22 @@ func (dbt *DBTransaction) Insert(
 	return processInsertRet(dbt.conn.Exec(sql, params...))
 }
 
+// Commit 方法，提交事物
+func (dbt *DBTransaction) Commit() {
+	err := dbt.conn.Commit()
+	if err != nil {
+		Error("db transaction commit faild ", err.Error())
+	}
+}
+
+// Rollback 方法，回滚事物
+func (dbt *DBTransaction) Rollback() {
+	err := dbt.conn.Rollback()
+	if err != nil {
+		Error("db transaction rollback faild ", err.Error())
+	}
+}
+
 // 返回查询结果数组
 func processQueryRet(rows *sql.Rows, err error) map[string]interface{} {
 	if err != nil {
