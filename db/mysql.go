@@ -10,7 +10,19 @@ import (
 
 // DBPool 类型， 是一个database容器，用于存储服务可能用到的所有db连接池
 type DBPool struct {
-	Pool map[string]*sql.DB
+	Pool map[string]*DBQuery
+}
+
+// DBQuery 对象，用于直接查询或执行
+type DBQuery struct {
+	database string
+	conn     *sql.DB
+}
+
+// DBTransaction 对象，用于事物查询或执行
+type DBTransaction struct {
+	database string
+	conn     *sql.Tx
 }
 
 // DB 全局变量，允许用户可以在任何一个方法中调用并操作数据库
@@ -19,7 +31,7 @@ var DB *DBPool
 // InitDB 方法，初始化全局变量，DB在使用之前必须初始化，且只能初始化一次
 func InitDB() *DBPool {
 	DB = &DBPool{}
-	DB.Pool = make(map[string]*sql.DB)
+	DB.Pool = make(map[string]*DBQuery)
 	return DB
 }
 
@@ -41,62 +53,144 @@ func (db *DBPool) AddDB(name, dsn string, maxOpenConns, maxIdleConns int) {
 	}
 	dbConn.SetMaxOpenConns(maxOpenConns)
 	dbConn.SetMaxIdleConns(maxIdleConns)
-	db.Pool[name] = dbConn
+	dbQuery := &DBQuery{}
+	dbQuery.conn = dbConn
+	dbQuery.database = name
+	db.Pool[name] = dbQuery
 }
 
-/**
- * Select 方法，返回查询结果数组
- */
+// UserDB 方法，返回DBQuery对象
+func (db *DBPool) UseDB(database string) *DBQuery {
+	return db.Pool[database]
+}
+
+// Begin 方法，返回DBTransaction对象
+func (db *DBPool) Begin(database string) *DBTransaction {
+	return db.Pool[database].Begin()
+}
+
+// Select 方法，返回查询结果数组
 func (db *DBPool) Select(
 	database, sql string,
 	params ...interface{}) map[string]interface{} {
-	rows, err := db.Pool[database].Query(sql, params...)
+
+	return db.Pool[database].Select(sql, params...)
+}
+
+// Update 方法，返回受影响行数
+func (db *DBPool) Update(
+	database, sql string,
+	params ...interface{}) int64 {
+
+	return db.Pool[database].Update(sql, params...)
+}
+
+// Insert 方法，返回插入id
+func (db *DBPool) Insert(
+	database, sql string,
+	params ...interface{}) int64 {
+
+	return db.Pool[database].Insert(sql, params...)
+}
+
+// Begin 方法，返回DBTransaction对象
+func (dbq *DBQuery) Begin() *DBTransaction {
+	trans := &DBTransaction{}
+	conn, err := dbq.conn.Begin()
 	if err != nil {
-		Error("db query error ", sql, err.Error())
+		Error("db create transaction faild", dbq.database, err.Error())
+		return trans
+	}
+	trans.conn = conn
+	return trans
+}
+
+// Select 方法，返回查询结果数组
+func (dbq *DBQuery) Select(
+	sql string,
+	params ...interface{}) map[string]interface{} {
+
+	return processQueryRet(dbq.conn.Query(sql, params...))
+}
+
+// Update 方法，返回受影响行数
+func (dbq *DBQuery) Update(
+	sql string,
+	params ...interface{}) int64 {
+
+	return processUpdateRet(dbq.conn.Exec(sql, params...))
+}
+
+// Insert 方法，返回插入id
+func (dbq *DBQuery) Insert(
+	sql string,
+	params ...interface{}) int64 {
+
+	return processInsertRet(dbq.conn.Exec(sql, params...))
+}
+
+// Select 方法，返回查询结果数组
+func (dbt *DBTransaction) Select(
+	sql string,
+	params ...interface{}) map[string]interface{} {
+
+	return processQueryRet(dbt.conn.Query(sql, params...))
+}
+
+// Update 方法，返回受影响行数
+func (dbt *DBTransaction) Update(
+	database, sql string,
+	params ...interface{}) int64 {
+
+	return processUpdateRet(dbt.conn.Exec(sql, params...))
+}
+
+// Insert 方法，返回插入id
+func (dbt *DBTransaction) Insert(
+	database, sql string,
+	params ...interface{}) int64 {
+
+	return processInsertRet(dbt.conn.Exec(sql, params...))
+}
+
+// 返回查询结果数组
+func processQueryRet(rows *sql.Rows, err error) map[string]interface{} {
+	if err != nil {
+		Error("db query error ", err.Error())
 		return nil
 	}
 	defer rows.Close()
 	ret, err := processRows(rows)
 	if err != nil {
-		Error("db query error ", sql, err.Error())
+		Error("db query error ", err.Error())
 		return nil
 	}
 	return ret
 }
 
-/**
- * Update 方法，返回受影响行数
- */
-func (db *DBPool) Update(
-	database, sql string,
-	params ...interface{}) int64 {
-	res, err := db.Pool[database].Exec(sql, params...)
+// 返回受影响行数
+func processUpdateRet(res sql.Result, err error) int64 {
 	if err != nil {
-		Error("db exec error ", sql, err.Error())
+		Error("db update error ", err.Error())
 		return -1
 	}
 	num, err := res.RowsAffected()
 	if err != nil {
-		Error("db exec error ", sql, err.Error())
+		Error("db update error ", err.Error())
 		return -1
 	}
 	return num
 }
 
-/**
- * Insert 方法，返回插入id
- */
-func (db *DBPool) Insert(
-	database, sql string,
-	params ...interface{}) int64 {
-	res, err := db.Pool[database].Exec(sql, params...)
+// 返回插入id
+func processInsertRet(res sql.Result, err error) int64 {
 	if err != nil {
-		Error("db exec error ", sql, err.Error())
+		Error("db exec error ", err.Error())
 		return -1
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		Error("db exec error ", sql, err.Error())
+		Error("db exec error ", err.Error())
 		return -1
 	}
 	return id
