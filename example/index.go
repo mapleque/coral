@@ -47,8 +47,15 @@ func initRouter(server *coral.Server) {
 
 	// /redis
 	redisRouter := baseRouter.NewRouter("redis", filter.Redis)
-	redisRouter.NewRouter("set", filter.Set)
-	redisRouter.NewRouter("get", filter.Get)
+	redisRouter.NewRouter("set",
+		r.Check(coral.V{
+			"key": r.IsString,
+			"val": r.IsInt}),
+		filter.Set)
+	redisRouter.NewRouter("get",
+		r.Check(coral.V{
+			"key": r.IsString}),
+		filter.Get)
 }
 
 func initDB() {

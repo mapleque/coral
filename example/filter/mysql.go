@@ -5,6 +5,8 @@ import (
 	. "github.com/coral/db"
 
 	. "github.com/coral/example/config"
+
+	"time"
 )
 
 func Mysql(context *Context) bool {
@@ -14,23 +16,24 @@ func Mysql(context *Context) bool {
 func Insert(context *Context) bool {
 	ret := DB.Insert(
 		DEFAULT_DB,
-		"INSERT INTO user (username,password) VALUSES (?,?)",
-		"aaa", "aaa")
+		`INSERT INTO coral (name, type, status, flag, rate, additional, time)
+		VALUES (?,?,?,?,?,?,?)`,
+		"coral", "a", 1, true, 0.99, "中文", time.Unix(time.Now().Unix(), 0).Format("2006-01-02 15:04:05"))
 	context.Data = ret
 	return true
 }
 func Update(context *Context) bool {
 	ret := DB.Update(
 		DEFAULT_DB,
-		"UPDATE user SET username = ? WHERE id = ?",
-		"bbb", 1)
+		"UPDATE coral SET status = ? WHERE name = ?",
+		2, "coral")
 	context.Data = ret
 	return true
 }
 func Select(context *Context) bool {
 	context.Data = DB.Select(
 		DEFAULT_DB,
-		"SELECT * FROM user WHERE id = ?",
-		1)
+		"SELECT * FROM coral WHERE name = ?",
+		"coral")
 	return true
 }

@@ -110,7 +110,7 @@ func processRows(rows *sql.Rows) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	values := make([]sql.RawBytes, len(columns))
+	values := make([]interface{}, len(columns))
 	scanArgs := make([]interface{}, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
@@ -126,7 +126,13 @@ func processRows(rows *sql.Rows) (map[string]interface{}, error) {
 			if col == nil {
 				ret[columns[i]] = "null"
 			} else {
-				ret[columns[i]] = string(col)
+				switch val := (*scanArgs[i].(*interface{})).(type) {
+				case []byte:
+					ret[columns[i]] = string(val)
+					break
+				default:
+					ret[columns[i]] = val
+				}
 			}
 		}
 	}

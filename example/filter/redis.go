@@ -23,6 +23,9 @@ func Set(context *Context) bool {
 func Get(context *Context) bool {
 	param := context.Params
 	key := param["key"].(string)
-	context.Data = Cache.Get(DEFAULT_REDIS, key)
+	var ret map[string]interface{}
+	ret = make(map[string]interface{})
+	ret[key] = Cache.Get(DEFAULT_REDIS, key)
+	context.Data = ret
 	return true
 }

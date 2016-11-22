@@ -81,12 +81,17 @@ func (redis *_Redis) do(cmd string,
 
 // Get 方法
 func (cache *CachePool) Get(name, key string) interface{} {
-	val, err := redis.Bytes(cache.Pool[name].do("GET", key))
+	val, err := cache.Pool[name].do("GET", key)
 	if err != nil {
 		Error("redis get error", name, key, err.Error())
 		return nil
 	}
-	return string(val)
+	switch val := val.(type) {
+	case []byte:
+		return string(val)
+	default:
+		return val
+	}
 }
 
 // Set 方法
