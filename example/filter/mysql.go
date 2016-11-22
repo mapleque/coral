@@ -43,7 +43,7 @@ func TransCommit(context *Context) bool {
 		"UPDATE coral SET status = ? WHERE name = ?",
 		1, "coral")
 	if ret < 1 {
-		context.Data = ret
+		context.Errmsg = "update faild rollback"
 		trans.Rollback()
 		return false
 	}
