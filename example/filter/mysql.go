@@ -31,9 +31,35 @@ func Update(context *Context) bool {
 	return true
 }
 func Select(context *Context) bool {
-	context.Data = DB.Select(
-		DEFAULT_DB,
+	conn := DB.UseDB(DEFAULT_DB)
+	context.Data = conn.Select(
 		"SELECT * FROM coral WHERE name = ?",
 		"coral")
 	return true
+}
+func TransCommit(context *Context) bool {
+	trans := DB.Begin(DEFAULT_DB)
+	ret := trans.Update(
+		"UPDATE coral SET status = ? WHERE name = ?",
+		1, "coral")
+	if ret < 1 {
+		context.Errmsg = "update faild rollback"
+		trans.Rollback()
+		return false
+	}
+	trans.Commit()
+	return Select(context)
+}
+
+func TransRollback(context *Context) bool {
+	trans := DB.Begin(DEFAULT_DB)
+	ret := trans.Update(
+		"UPDATE coral SET status = ? WHERE name = ?",
+		2, "coral")
+	if ret < 1 {
+		context.Data = ret
+		return false
+	}
+	trans.Rollback()
+	return Select(context)
 }

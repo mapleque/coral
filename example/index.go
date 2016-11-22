@@ -38,12 +38,12 @@ func initRouter(server *coral.Server) {
 
 	// /mysql
 	mysqlRouter := baseRouter.NewRouter("mysql", filter.Mysql)
-	// /mysql/select
+	// /mysql/*
 	mysqlRouter.NewRouter("select", filter.Select)
-	// /mysql/insert
 	mysqlRouter.NewRouter("insert", filter.Insert)
-	// /mysql/update
 	mysqlRouter.NewRouter("update", filter.Update)
+	mysqlRouter.NewRouter("transCommit", filter.TransCommit)
+	mysqlRouter.NewRouter("transRollback", filter.TransRollback)
 
 	// /redis
 	redisRouter := baseRouter.NewRouter("redis", filter.Redis)

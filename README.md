@@ -82,15 +82,38 @@ func initDB() {
 ```
 实现对应的filter
 ```
-func Select(context *Context) bool {
-	context.Data = DB.Select(
-		DEF_DEFAULT_DB,
-		"SELECT * FROM user WHERE id = ?",
-		1)
+// 插入数据，可以直接使用DBPool对象操作数据库
+func Insert(context *Context) bool {
+	ret := DB.Insert(
+		DEFAULT_DB,
+		`INSERT INTO coral (name, type, status, flag, rate, additional, time)
+		VALUES (?,?,?,?,?,?,?)`,
+		"coral", "a", 1, true, 0.99, "中文", time.Unix(time.Now().Unix(), 0).Format("2006-01-02 15:04:05"))
+	context.Data = ret
 	return true
 }
-TODO 批量操作mysql用prepare
-TODO 事物
+// 查询数据，也可以用DBquery对象操作数据库
+func Select(context *Context) bool {
+	conn := DB.UseDB(DEFAULT_DB)
+	context.Data = conn.Select(
+		"SELECT * FROM coral WHERE name = ?",
+		"coral")
+	return true
+}
+// 事物
+func TransCommit(context *Context) bool {
+	trans := DB.Begin(DEFAULT_DB)
+	ret := trans.Update(
+		"UPDATE coral SET status = ? WHERE name = ?",
+		1, "coral")
+	if ret < 1 {
+		context.Data = "update faild rollback"
+		trans.Rollback()
+		return false
+	}
+	trans.Commit()
+	return Select(context)
+}
 ```
 # Redis
 Redis驱动选用了github.com/garyburd/redigo/redis，框架cache包对其进行了封装，用户需要再启动server之前初始化并添加自己的redis，然后通过全局变量Cache就可以调用Set或者Get进行操作。
