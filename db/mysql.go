@@ -110,7 +110,8 @@ func (dbq *DBQuery) Select(
 	sql string,
 	params ...interface{}) map[string]interface{} {
 
-	return processQueryRet(dbq.conn.Query(sql, params...))
+	ret, err := dbq.conn.Query(sql, params...)
+	return processQueryRet(sql, ret, err)
 }
 
 // Update 方法，返回受影响行数
@@ -118,7 +119,8 @@ func (dbq *DBQuery) Update(
 	sql string,
 	params ...interface{}) int64 {
 
-	return processUpdateRet(dbq.conn.Exec(sql, params...))
+	ret, err := dbq.conn.Exec(sql, params...)
+	return processUpdateRet(sql, ret, err)
 }
 
 // Insert 方法，返回插入id
@@ -126,7 +128,8 @@ func (dbq *DBQuery) Insert(
 	sql string,
 	params ...interface{}) int64 {
 
-	return processInsertRet(dbq.conn.Exec(sql, params...))
+	ret, err := dbq.conn.Exec(sql, params...)
+	return processInsertRet(sql, ret, err)
 }
 
 // Select 方法，返回查询结果数组
@@ -134,30 +137,33 @@ func (dbt *DBTransaction) Select(
 	sql string,
 	params ...interface{}) map[string]interface{} {
 
-	return processQueryRet(dbt.conn.Query(sql, params...))
+	ret, err := dbt.conn.Query(sql, params...)
+	return processQueryRet(sql, ret, err)
 }
 
 // Update 方法，返回受影响行数
 func (dbt *DBTransaction) Update(
-	database, sql string,
+	sql string,
 	params ...interface{}) int64 {
 
-	return processUpdateRet(dbt.conn.Exec(sql, params...))
+	ret, err := dbt.conn.Exec(sql, params...)
+	return processUpdateRet(sql, ret, err)
 }
 
 // Insert 方法，返回插入id
 func (dbt *DBTransaction) Insert(
-	database, sql string,
+	sql string,
 	params ...interface{}) int64 {
 
-	return processInsertRet(dbt.conn.Exec(sql, params...))
+	ret, err := dbt.conn.Exec(sql, params...)
+	return processInsertRet(sql, ret, err)
 }
 
 // Commit 方法，提交事物
 func (dbt *DBTransaction) Commit() {
 	err := dbt.conn.Commit()
 	if err != nil {
-		Error("db transaction commit faild ", err.Error())
+		Error("db transaction commit faild ", dbt.database, err.Error())
 	}
 }
 
@@ -165,48 +171,48 @@ func (dbt *DBTransaction) Commit() {
 func (dbt *DBTransaction) Rollback() {
 	err := dbt.conn.Rollback()
 	if err != nil {
-		Error("db transaction rollback faild ", err.Error())
+		Error("db transaction rollback faild ", dbt.database, err.Error())
 	}
 }
 
 // 返回查询结果数组
-func processQueryRet(rows *sql.Rows, err error) map[string]interface{} {
+func processQueryRet(query string, rows *sql.Rows, err error) map[string]interface{} {
 	if err != nil {
-		Error("db query error ", err.Error())
+		Error("db query error ", query, err.Error())
 		return nil
 	}
 	defer rows.Close()
 	ret, err := processRows(rows)
 	if err != nil {
-		Error("db query error ", err.Error())
+		Error("db query error ", query, err.Error())
 		return nil
 	}
 	return ret
 }
 
 // 返回受影响行数
-func processUpdateRet(res sql.Result, err error) int64 {
+func processUpdateRet(query string, res sql.Result, err error) int64 {
 	if err != nil {
-		Error("db update error ", err.Error())
+		Error("db update error ", query, err.Error())
 		return -1
 	}
 	num, err := res.RowsAffected()
 	if err != nil {
-		Error("db update error ", err.Error())
+		Error("db update error ", query, err.Error())
 		return -1
 	}
 	return num
 }
 
 // 返回插入id
-func processInsertRet(res sql.Result, err error) int64 {
+func processInsertRet(query string, res sql.Result, err error) int64 {
 	if err != nil {
-		Error("db exec error ", err.Error())
+		Error("db exec error ", query, err.Error())
 		return -1
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		Error("db exec error ", err.Error())
+		Error("db exec error ", query, err.Error())
 		return -1
 	}
 	return id
