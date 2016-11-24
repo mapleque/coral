@@ -134,24 +134,24 @@ func (router *Router) genHandler(filterChains ...Filter) func(http.ResponseWrite
 		// deal params
 		context.Params = router.processParams(req)
 
+		response := &Response{}
 		for _, filter := range filterChains {
 			if !filter(context) {
 				Warn("filter break")
 				if context.Status == 0 {
 					response.Status = STATUS_ERROR_UNKNOWN
 				}
-				if context.Errmsg == nil {
+				if context.Errmsg == "" {
 					response.Errmsg = "filter return false"
 				}
 				break
 			}
 		}
-		response := &Response{}
 		if context.Status != 0 {
 			response.Status = context.Status
 		}
 		response.Data = context.Data
-		if context.Errmsg != nil {
+		if context.Errmsg != "" {
 			response.Errmsg = context.Errmsg
 		}
 		out, err := json.Marshal(response)
