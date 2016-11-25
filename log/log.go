@@ -23,12 +23,9 @@ import (
 	"sync"
 )
 
-// LEVEL 日志级别类型
-type LEVEL int32
-
 const (
 	// 0 - 5
-	ALL LEVEL = iota
+	ALL = iota
 	DEBUG
 	INFO
 	WARN
@@ -45,12 +42,12 @@ type LogPool struct {
 type Logger struct {
 	path      string // 日志输出路径
 	filename  string // 日志输出文件名
-	maxLevel  LEVEL  // 日志接受的最高级别
-	minLevel  LEVEL  // 日志接受的最低级别
-	maxNumber int32  // 日志最大文件数，超过则循环替代
+	maxLevel  int    // 日志接受的最高级别
+	minLevel  int    // 日志接受的最低级别
+	maxNumber int    // 日志最大文件数，超过则循环替代
 	maxSize   int64  // 日志单个文件最大size，单位byte
 
-	suffix  int32         // 当前rotate后缀
+	suffix  int           // 当前rotate后缀
 	mux     *sync.RWMutex // 并发锁
 	logFile *os.File      // 日志文件指针
 	logger  *log.Logger   // go的logger指针
@@ -59,18 +56,21 @@ type Logger struct {
 // Log 全局变量
 var Log *LogPool
 
-// InitLog 方法，初始化日志池，并返回Log对象
-func InitLog() *LogPool {
+func init() {
+	if Log != nil {
+		return
+	}
+	Info("init log module...")
 	Log = &LogPool{}
 	Log.Pool = make(map[string]*Logger)
-	return Log
 }
 
 // 增加一个日志输出模块
 func (lp *LogPool) AddLogger(
 	name, path string,
-	maxNumber int32, maxSize int64,
-	maxLevel LEVEL, minLevel LEVEL) {
+	maxNumber int, maxSize int64,
+	maxLevel int, minLevel int) {
+	Info("add logger", name, path)
 	logger := &Logger{}
 
 	logger.path = path
@@ -91,7 +91,7 @@ func (lp *LogPool) AddLogger(
 // logInfo是为了可变参数输出而定义的接口数据类型
 type logInfo []interface{}
 
-func baseLog(level LEVEL, prefix string, msg ...interface{}) {
+func baseLog(level int, prefix string, msg ...interface{}) {
 	msg = append(logInfo{prefix}, msg...)
 	if Log != nil {
 		Log.log(level, msg...)
@@ -129,7 +129,7 @@ func Callstack() {
 	baseLog(ALL, "", msg...)
 }
 
-func (lp *LogPool) log(level LEVEL, msg ...interface{}) {
+func (lp *LogPool) log(level int, msg ...interface{}) {
 	for _, logger := range lp.Pool {
 		if logger.logger != nil &&
 			((logger.maxLevel >= level && logger.minLevel <= level) ||
@@ -166,7 +166,7 @@ func (lg *Logger) Callstack() {
 	lg.log(ALL, "", msg...)
 }
 
-func (logger *Logger) log(level LEVEL, prefix string, msg ...interface{}) {
+func (logger *Logger) log(level int, prefix string, msg ...interface{}) {
 	msg = append(logInfo{prefix}, msg...)
 	if logger.logger != nil &&
 		((logger.maxLevel >= level && logger.minLevel <= level) ||
@@ -184,7 +184,7 @@ func (lg *Logger) rotate() {
 	if fileSize(curFilename) > lg.maxSize {
 		lg.mux.Lock()
 		defer lg.mux.Unlock()
-		lg.suffix = int32((lg.suffix + 1) % lg.maxNumber)
+		lg.suffix = int((lg.suffix + 1) % lg.maxNumber)
 		if lg.logFile != nil {
 			lg.logFile.Close()
 		}

@@ -22,16 +22,20 @@ type _Redis struct {
 var Cache *CachePool
 
 // InitCache 方法，初始化全局变量，cache在使用之前必须初始化，且只能初始化一次
-func InitCache() *CachePool {
+func init() {
+	if Cache != nil {
+		return
+	}
+	Info("init cache module...")
 	Cache = &CachePool{}
 	Cache.Pool = make(map[string]*_Redis)
-	return Cache
 }
 
 // AddRedis 方法，添加一个redis实例
 func (cache *CachePool) AddRedis(
 	name, server, auth string,
 	maxActive, maxIdle int) {
+	Info("add redis", name, server)
 	redis := &_Redis{}
 	redis.conn = newPool(server, auth, maxActive, maxIdle)
 	cache.Pool[name] = redis
@@ -45,13 +49,13 @@ func newPool(server, password string, maxActive, maxIdle int) *redis.Pool {
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", server)
 			if err != nil {
-				Error("can not connect to redis ", server, err.Error())
+				Error("can not connect to redis", server, err.Error())
 				return nil, err
 			}
 			if password != "" {
 				if _, err := c.Do("AUTH", password); err != nil {
 					c.Close()
-					Error("redis auth faild ", server, err.Error())
+					Error("redis auth faild", server, err.Error())
 					return nil, err
 				}
 			}

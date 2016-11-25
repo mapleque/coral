@@ -5,7 +5,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	. "coral/log"
+	. "github.com/coral/log"
 )
 
 // DBPool 类型， 是一个database容器，用于存储服务可能用到的所有db连接池
@@ -28,27 +28,30 @@ type DBTransaction struct {
 // DB 全局变量，允许用户可以在任何一个方法中调用并操作数据库
 var DB *DBPool
 
-// InitDB 方法，初始化全局变量，DB在使用之前必须初始化，且只能初始化一次
-func InitDB() *DBPool {
+func init() {
+	if DB != nil {
+		return
+	}
+	Info("init db module...")
 	DB = &DBPool{}
 	DB.Pool = make(map[string]*DBQuery)
-	return DB
 }
 
 /**
  * AddDB 方法，添加一个database，并且在启动前验证其连通性
  */
 func (db *DBPool) AddDB(name, dsn string, maxOpenConns, maxIdleConns int) {
+	Info("add db", name, dsn)
 	dbConn, err := sql.Open("mysql", dsn)
 	if err != nil {
-		Error("can not open db ", dsn, err.Error())
+		Error("can not open db", dsn, err.Error())
 		panic(err.Error())
 	}
 	//	defer db.Close()
 	// 如果这里defer，这里刚添加完的db就会被关掉
 	err = dbConn.Ping()
 	if err != nil {
-		Error("can not ping db ", dsn, err.Error())
+		Error("can not ping db", dsn, err.Error())
 		panic(err.Error()) // 直接panic，让server无法启动
 	}
 	dbConn.SetMaxOpenConns(maxOpenConns)
@@ -163,7 +166,7 @@ func (dbt *DBTransaction) Insert(
 func (dbt *DBTransaction) Commit() {
 	err := dbt.conn.Commit()
 	if err != nil {
-		Error("db transaction commit faild ", dbt.database, err.Error())
+		Error("db transaction commit faild", dbt.database, err.Error())
 	}
 }
 
@@ -171,20 +174,20 @@ func (dbt *DBTransaction) Commit() {
 func (dbt *DBTransaction) Rollback() {
 	err := dbt.conn.Rollback()
 	if err != nil {
-		Error("db transaction rollback faild ", dbt.database, err.Error())
+		Error("db transaction rollback faild", dbt.database, err.Error())
 	}
 }
 
 // 返回查询结果数组
 func processQueryRet(query string, rows *sql.Rows, err error) map[string]interface{} {
 	if err != nil {
-		Error("db query error ", query, err.Error())
+		Error("db query error", query, err.Error())
 		return nil
 	}
 	defer rows.Close()
 	ret, err := processRows(rows)
 	if err != nil {
-		Error("db query error ", query, err.Error())
+		Error("db query error", query, err.Error())
 		return nil
 	}
 	return ret
@@ -193,12 +196,12 @@ func processQueryRet(query string, rows *sql.Rows, err error) map[string]interfa
 // 返回受影响行数
 func processUpdateRet(query string, res sql.Result, err error) int64 {
 	if err != nil {
-		Error("db update error ", query, err.Error())
+		Error("db update error", query, err.Error())
 		return -1
 	}
 	num, err := res.RowsAffected()
 	if err != nil {
-		Error("db update error ", query, err.Error())
+		Error("db update error", query, err.Error())
 		return -1
 	}
 	return num
@@ -207,12 +210,12 @@ func processUpdateRet(query string, res sql.Result, err error) int64 {
 // 返回插入id
 func processInsertRet(query string, res sql.Result, err error) int64 {
 	if err != nil {
-		Error("db exec error ", query, err.Error())
+		Error("db exec error", query, err.Error())
 		return -1
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		Error("db exec error ", query, err.Error())
+		Error("db exec error", query, err.Error())
 		return -1
 	}
 	return id

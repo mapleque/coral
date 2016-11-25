@@ -10,7 +10,7 @@ import (
 type ParamCheckRule interface {
 	Check(V) Filter
 
-	Optioanl(func(interface{})) RF
+	Optional(func(interface{})) RF
 	And(...func(interface{})) RF
 	Or(...func(interface{})) RF
 
@@ -30,6 +30,12 @@ type Validator map[string]RF
 type V Validator
 type R struct{}
 
+var ParamChecker *R
+
+func init() {
+	ParamChecker = &R{}
+}
+
 func (r *R) Check(v V) Filter {
 	return func(context *Context) bool {
 		for k, f := range v {
@@ -47,7 +53,7 @@ func (r *R) Check(v V) Filter {
 	}
 }
 
-func (r *R) Optioanl(f RF) RF {
+func (r *R) Optional(f RF) RF {
 	return func(context *Context, key string) bool {
 		p := context.Params[key]
 		if p != nil {
@@ -95,7 +101,7 @@ func (r *R) IsBool(context *Context, key string) bool {
 		context.Params[key] = false
 		break
 	default:
-		Debug(fmt.Sprintf("param type should be bool but ", p))
+		Debug(fmt.Sprintf("param type should be bool but", p))
 		return false
 	}
 	return true
@@ -128,7 +134,7 @@ func (r *R) Min(min int) RF {
 		p := context.Params[key]
 		l := p.(int)
 		if l < min {
-			Debug("param min should be ", min, " but ", l)
+			Debug("param min should be", min, "but", l)
 			return false
 		}
 		return true
@@ -140,7 +146,7 @@ func (r *R) Max(max int) RF {
 		p := context.Params[key]
 		l := p.(int)
 		if l > max {
-			Debug("param max should be ", max, " but ", l)
+			Debug("param max should be", max, "but", l)
 			return false
 		}
 		return true
@@ -152,7 +158,7 @@ func (r *R) MinLen(min int) RF {
 		p := context.Params[key]
 		l := len(p.(string))
 		if l < min {
-			Debug("param min len should be ", min, " but ", l)
+			Debug("param min len should be", min, "but", l)
 			return false
 		}
 		return true
@@ -164,7 +170,7 @@ func (r *R) MaxLen(max int) RF {
 		p := context.Params[key]
 		l := len(p.(string))
 		if l > max {
-			Debug("param max len should be ", max, " but ", l)
+			Debug("param max len should be", max, "but", l)
 			return false
 		}
 		return true

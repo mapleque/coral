@@ -54,8 +54,7 @@ type Response struct {
 
 // NewServer返回一个Server对象引用
 func NewServer(host string) *Server {
-	Info("========================================")
-	Info("server start now ... ")
+	Info("coral start now ...")
 	server := &Server{}
 	server.mux = http.NewServeMux()
 	server.host = host
@@ -70,7 +69,7 @@ func (server *Server) AddRoute(router *Router) {
 // Run启动server的服务
 func (server *Server) Run() {
 	server.registerRouters()
-	Info("server listening on " + server.host)
+	Info("coral listening on" + server.host)
 	Info("========================================")
 	err := http.ListenAndServe(server.host, server.mux)
 	if err != nil {
@@ -99,7 +98,7 @@ func (server *Server) registerRouters() {
 
 // registerRouter 递归注册指定的一个router
 func (server *Server) registerRouter(router *Router) {
-	Info("register router " + router.path)
+	Info("register router" + router.path)
 	server.mux.HandleFunc(router.path, router.handler)
 	for _, child := range router.routers {
 		server.registerRouter(child)
@@ -110,7 +109,7 @@ func (server *Server) registerRouter(router *Router) {
 func (router *Router) NewRouter(path string, filterChains ...Filter) *Router {
 	// path head must be "/"
 	if len(path) < 1 {
-		Error("Empty router path register on ", router.path)
+		Error("Empty router path register on", router.path)
 	}
 	if path[0] != '/' && router.path[len(router.path)-1] != '/' {
 		path = "/" + path
@@ -158,7 +157,16 @@ func (router *Router) genHandler(filterChains ...Filter) func(http.ResponseWrite
 		if err != nil {
 			Error(err)
 		}
-		Info("<-", time.Now().Sub(startTime), context.Host, context.Path, context.Params, "->", context.Status, context.Data, context.Errmsg)
+		Info(
+			"<-",
+			time.Now().Sub(startTime),
+			context.Host,
+			context.Path,
+			context.Params,
+			"->",
+			context.Status,
+			context.Data,
+			context.Errmsg)
 		w.Write(out)
 	}
 }
