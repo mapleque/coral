@@ -9,6 +9,7 @@ import (
 	db "github.com/coral/db"
 	log "github.com/coral/log"
 
+	. "github.com/coral/example/constant"
 	filter "github.com/coral/example/filter"
 )
 
@@ -63,7 +64,7 @@ func initRouter(server *coral.Server) {
 func initDB() {
 	// add default db
 	db.DB.AddDB(
-		_config.Get("db.DEFAULT_DB"),
+		DEF_CORAL_DB,
 		_config.Get("db.DEFAULT_DB_DSN"),
 		_config.Int("db.DEFAULT_DB_MAX_CONNECTION"),
 		_config.Int("db.DEFAULT_DB_MAX_IDLE"))
@@ -75,7 +76,7 @@ func initDB() {
 func initRedis() {
 	// add default cache
 	cache.Cache.AddRedis(
-		_config.Get("cache.DEFAULT_REDIS"),
+		DEF_CORAL_REDIS,
 		_config.Get("cache.DEFAULT_REDIS_SERVER"),
 		_config.Get("cache.DEFAULT_REDIS_AUTH"),
 		_config.Int("cache.DEFAULT_REDIS_MAX_CONNECTION"),
@@ -88,7 +89,7 @@ func initRedis() {
 func initLog() {
 	// add default logger
 	log.Log.AddLogger(
-		_config.Get("log.DEFAULT_LOG"),
+		DEF_CORAL_LOG,
 		_config.Get("log.DEFAULT_LOG_PATH"),
 		_config.Int("log.DEFAULT_LOG_MAX_NUMBER"),
 		_config.Int64("log.DEFAULT_LOG_MAX_SIZE"),
@@ -103,8 +104,8 @@ func main() {
 	conf := flag.String("ini", "", "your config file")
 	flag.Parse()
 	if *conf != "" {
-		config.AddConfiger(config.INI, "config", *conf)
-		_config = config.Use("config")
+		config.AddConfiger(config.INI, DEF_CORAL_CONF, *conf)
+		_config = config.Use(DEF_CORAL_CONF)
 
 		// init log
 		initLog()
