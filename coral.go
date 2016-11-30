@@ -69,7 +69,7 @@ func (server *Server) AddRoute(router *Router) {
 // Run启动server的服务
 func (server *Server) Run() {
 	server.registerRouters()
-	Info("coral listening on" + server.host)
+	Info("coral listening on", server.host)
 	Info("========================================")
 	err := http.ListenAndServe(server.host, server.mux)
 	if err != nil {
@@ -98,7 +98,7 @@ func (server *Server) registerRouters() {
 
 // registerRouter 递归注册指定的一个router
 func (server *Server) registerRouter(router *Router) {
-	Info("register router" + router.path)
+	Info("register router", router.path)
 	server.mux.HandleFunc(router.path, router.handler)
 	for _, child := range router.routers {
 		server.registerRouter(child)
