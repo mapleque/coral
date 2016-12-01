@@ -35,6 +35,25 @@ func initRouter(server *coral.Server) {
 		filter.Param,
 	)
 	// TODO 更复杂的check
+	doc := &coral.Doc{
+		Path:        "doc-example",
+		Description: "a example api",
+		Input: coral.DocField{
+			"a": "string&minlen:2&maxlen:2"},
+		Output: coral.DocField{
+			"status": "int",
+			"data": coral.DocField{
+				"a": "string&minlen:2&maxlen:2",
+				"b": coral.DocField{
+					"c": "int&max:10&min:1"},
+				"list": []coral.DocField{
+					coral.DocField{"e": "int"},
+					coral.DocField{"e": "int"},
+					coral.DocField{"e": "int"},
+					coral.DocField{"e": "int"}}},
+			"errmsg": "optional"}}
+	// doc
+	baseRouter.NewDocRouter(doc, filter.Param)
 
 	// log
 	baseRouter.NewRouter("log", filter.Log)

@@ -3,6 +3,7 @@ package coral
 import (
 	"encoding/json"
 	"net/http"
+	"sort"
 	"time"
 
 	. "github.com/coral/log"
@@ -29,18 +30,14 @@ type Router struct {
 }
 
 type Doc struct {
-	description string
-	path        string
+	Path        string
+	Description string
 	docPath     string
-	input       []*DocField
-	output      []*DocField
+	Input       DocField
+	Output      DocField
 }
 
-type DocField struct {
-	name  string
-	rule  string
-	extra *DocField
-}
+type DocField map[string]interface{}
 
 // Filter 是一个接口过滤器
 // 在创建router的时候传入的filterChains中的每一个元素都必须是这一类型
@@ -112,8 +109,8 @@ func (server *Server) NewRouter(path string, filterChains ...Filter) *Router {
 // 创建一个带有doc的路由对象
 func (server *Server) NewDocRouter(doc *Doc, filterChains ...Filter) *Router {
 	// path head must be "/"
-	if len(doc.path) < 1 || doc.path[0] != '/' {
-		doc.path = "/" + doc.path
+	if len(doc.Path) < 1 || doc.Path[0] != '/' {
+		doc.Path = "/" + doc.Path
 	}
 	router := newDocRouter(doc, filterChains...)
 	server.AddRoute(router)
@@ -163,13 +160,13 @@ func (router *Router) NewRouter(path string, filterChains ...Filter) *Router {
 // 添加一个带doc的子路由
 func (router *Router) NewDocRouter(doc *Doc, filterChains ...Filter) *Router {
 	// path head must be "/"
-	if len(doc.path) < 1 {
+	if len(doc.Path) < 1 {
 		Error("Empty router path register on", router.path)
 	}
-	if doc.path[0] != '/' && router.path[len(router.path)-1] != '/' {
-		doc.path = "/" + doc.path
+	if doc.Path[0] != '/' && router.path[len(router.path)-1] != '/' {
+		doc.Path = "/" + doc.Path
 	}
-	doc.path = router.path + doc.path
+	doc.Path = router.path + doc.Path
 	subRouter := newDocRouter(doc, filterChains...)
 	router.routers = append(router.routers, subRouter)
 	return subRouter
@@ -265,8 +262,8 @@ func newRouter(path string, filterChains ...Filter) *Router {
 	router.docPath = path + docPath
 
 	doc := &Doc{}
-	doc.description = "no description in simple router"
-	doc.path = router.path
+	doc.Description = "no description in simple router"
+	doc.Path = router.path
 	doc.docPath = router.docPath
 	router.doc = doc
 
@@ -277,15 +274,16 @@ func newRouter(path string, filterChains ...Filter) *Router {
 
 func newDocRouter(doc *Doc, filterChains ...Filter) *Router {
 	router := &Router{}
-	router.path = doc.path
+	router.path = doc.Path
 	docPath := "doc"
-	if doc.path[len(doc.path)-1] != '/' {
+	if doc.Path[len(doc.Path)-1] != '/' {
 		docPath = "/" + docPath
 	}
 	router.doc = doc
-	router.docPath = doc.path + docPath
+	router.docPath = doc.Path + docPath
 	router.handler = router.genHandler(filterChains...)
 	router.docHandler = router.genDocHandler()
+	doc.docPath = router.docPath
 	return router
 }
 
@@ -324,24 +322,56 @@ func (doc *Doc) genView() string {
 	ret := "<hr>" +
 		"<p>" +
 		"<a href='" + doc.docPath +
-		"' title='click to see sub tree'>@path:</a> " + doc.path +
+		"' title='click to see sub tree'>@path:</a> " + doc.Path +
 		"</p>"
-	ret = ret + "<p>" + doc.description + "</p>"
-	ret = ret + "<p><- input</p>"
-	for _, field := range doc.input {
-		ret = ret + field.genView()
+	ret = ret + "<p>" + doc.Description + "</p>"
+	if doc.Input != nil {
+		ret = ret + "<p><- input</p>"
+		ret = ret + "<pre>{\n" + doc.Input.genView("\t") + "}</pre>"
 	}
-	ret = ret + "<h4>-> output</h4>"
-	for _, field := range doc.output {
-		ret = ret + field.genView()
+	if doc.Output != nil {
+		ret = ret + "<h4>-> output</h4>"
+		ret = ret + "<pre>{\n" + doc.Output.genView("\t") + "}</pre>"
 	}
 	return ret
 }
 
-func (field *DocField) genView() string {
+func (field DocField) genView(prefix string) string {
 	if field == nil {
 		return ""
 	}
-	return "<li>" + "<p>" + field.name + " " + field.rule + "</p>" +
-		"<ul>" + field.extra.genView() + "</ul>" + "</li>"
+	ret := ""
+	var keys []string
+	for key := range field {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		value := field[key]
+		if ret != "" {
+			ret = ret + ",\n"
+		}
+		switch value := value.(type) {
+		case DocField:
+			ret = ret + prefix + key + ": {\n" + value.genView(prefix+"\t") + "\n" + prefix + "}"
+			break
+		case string:
+			ret = ret + prefix + key + ": " + value
+			break
+		case []DocField:
+			ret = ret + prefix + key + ": ["
+			list := ""
+			for _, sf := range value {
+				if list != "" {
+					list = list + ",\n" + prefix
+				}
+				list = list + "{\n" + sf.genView(prefix+"\t") + prefix + "}"
+			}
+			ret = ret + list + "]"
+			break
+		default:
+			Error("doc build error: unexpect rule", value)
+		}
+	}
+	return ret + "\n"
 }
