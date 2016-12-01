@@ -5,7 +5,8 @@ import (
 )
 
 func Index(context *Context) bool {
-	context.Data = "hello coral"
+	context.Data = "Hello coral"
+	context.Raw = true
 	return true
 }
 
