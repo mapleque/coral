@@ -35,6 +35,8 @@ func initRouter(server *coral.Server) {
 		filter.Param,
 	)
 	// TODO 更复杂的check
+
+	// doc
 	doc := &coral.Doc{
 		Path:        "doc-example",
 		Description: "a example api",
@@ -52,7 +54,6 @@ func initRouter(server *coral.Server) {
 					coral.DocField{"e": "int"},
 					coral.DocField{"e": "int"}}},
 			"errmsg": "optional"}}
-	// doc
 	baseRouter.NewDocRouter(doc, filter.Param)
 
 	// log

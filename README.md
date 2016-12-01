@@ -55,6 +55,30 @@ paramRouter.NewRouter("check", r.Check(V{"a": r.IsString, "b": r.IsInt, "c": r.I
 事实上，http包对于从请求获取的参数，都是string类型，因此在参数校验的方法里边，特意加入了强制类型转换逻辑，校验方法会根据用户所要求的类型尝试转换参数，如果成功就赋值给context.Params否则直接返回参数错误提示。这样一来，用户在自己的Filter中就可以直接使用期望的参数类型了。
 这里的check方法，实际上返回的就是一个Filter，因此用户完全可以自己实现参数校验，就像Filter所干的事情一样。
 值得注意的是，这里使用了前面提到的router对Filter的链式调用。
+# Doc
+coral支持通过预定义的doc信息，生成api doc，同时也会根据doc校验输入和输出。
+```
+	// doc
+	doc := &coral.Doc{
+		Path:        "doc-example",
+		Description: "a example api",
+		Input: coral.DocField{
+			"a": "string&minlen:2&maxlen:2"},
+		Output: coral.DocField{
+			"status": "int",
+			"data": coral.DocField{
+				"a": "string&minlen:2&maxlen:2",
+				"b": coral.DocField{
+					"c": "int&max:10&min:1"},
+				"list": []coral.DocField{
+					coral.DocField{"e": "int"},
+					coral.DocField{"e": "int"},
+					coral.DocField{"e": "int"},
+					coral.DocField{"e": "int"}}},
+			"errmsg": "optional"}}
+	baseRouter.NewDocRouter(doc, filter.Param)
+```
+当server运行时，访问/doc可以看到全部路由doc，也可以点击对应的doc节点查看子路由的doc
 # Mysql
 Mysql驱动选用了github.com/go-sql-driver/mysql，框架db包对其操作进行了封装，用户需要在启动server之前初始化并添加自己的DB，然后通过一个全局变量DB就可以调用对应sql方法进行数据库操作。
 ```
