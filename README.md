@@ -23,51 +23,100 @@ Filter是api接管请求，添加进一步逻辑处理的入口，对于每个Fi
 Context对象是请求处理过程中贯穿始终的上下文数据，用户在使用框架的任何filter中都可以对其中数据加工处理。
 系统最终会将Context对象中的Status,Data,Errmsg返回给请求者。
 ```
-package api
+package filter
 
 import (
-	. "coral/common"
+	. "github.com/coral"
 )
 
-func Index(context *Context) {
-	context.Data = "hello coral"
-    return true
+func Index(context *Context) bool {
+	context.Data = "Hello coral"
+	context.Raw = true
+	return true
 }
 
 func Param(context *Context) bool {
 	context.Data = context.Params
 	return true
 }
+
+func ParamGet(context *Context) bool {
+	ret := make(map[string]interface{})
+	ret["intVal"] = Int(context.Params["int"])
+	ret["strVal"] = String(context.Params["string"])
+
+	data := Map(context.Params["data"])
+
+	arrInt := Array(data["array"])
+	for i, arrIntVal := range arrInt {
+		ret["arrInt"+String(i)] = Int(arrIntVal)
+	}
+	arrEle := Array(data["list"])
+	for i, arrEleVal := range arrEle {
+		arrEleValMap := Map(arrEleVal)
+		ret["arrEleVal"+String(i)] = arrEleValMap["ele"]
+	}
+	context.Data = ret
+	return true
+}
 ```
+在filter中从contex.Params中提取参数值做进一步操作时，通常需要指定类型，coral实现了强制类型转换的方法，在上面代码的ParamGet方法中，可以看到这些方法的使用方式。这个filter的路由定义在下面的代码中。
 # Doc
 coral支持通过预定义的doc信息，生成api doc，同时也会根据doc校验输入和输出。
 ```
 // /doc-example?a=aa&b={"c":1}&data={"list":[{"e":"2"},{"e":"0"}],"pages":[0,2,3]}
-doc := &coral.Doc{
-    Path:        "doc-example",
-    Description: "a example api",
-    Input: coral.Checker{
-        "a": "string(2)",
-        "b": coral.Checker{
-            "c": "int[1,10]"},
-        "data": coral.Checker{
-            "list": []coral.Checker{
-                coral.Checker{"e": "string"}},
-            "pages": []string{"int"}}},
-    Output: coral.Checker{
-        "status": "int",
-        "data": coral.Checker{
-            "a": "string(2)",
-            "b": coral.Checker{
-                "c": "int[1,10]"},
-            "data": coral.Checker{
-                "list": []coral.Checker{
-                    coral.Checker{"e": "string"}},
-                "pages": []string{"int"}}},
-        "errmsg": "string"}}
-baseRouter.NewDocRouter(doc, filter.Param)
+	doc := &coral.Doc{
+		Path:        "doc-example",
+		Description: "a example api",
+		Input: coral.Checker{
+			"a": coral.Rule("string(2)", STATUS_INVALID_INPUT, "字符串"),
+			"b": coral.Checker{
+				"c": coral.Rule(
+					"int[1,10]",
+					STATUS_INVALID_INPUT,
+					"1-10的int")},
+			"data": coral.Checker{
+				"list": []coral.Checker{
+					coral.Checker{
+						"e": coral.Rule(
+							"string",
+							STATUS_INVALID_INPUT,
+							"数组里每个元素都是这样的对象")}},
+				"pages": []string{coral.Rule(
+					"int",
+					STATUS_INVALID_INPUT,
+					"素组每个元素都是int")}}},
+		Output: coral.Checker{
+			"status": coral.Rule(
+				"int",
+				STATUS_INVALID_OUTPUT,
+				"对应的说明"),
+			"data": coral.Checker{
+				"a": "string(2)", // 也可以直接写
+				"b": coral.Checker{
+					"c": coral.Rule("int[1,10]", 0, "")}, // 也可以省略说明
+				"data": coral.Checker{
+					"list": []coral.Checker{
+						coral.Checker{"e": "string"}},
+					"pages": []string{"int"}}},
+			"errmsg": "string"}}
+	baseRouter.NewDocRouter(doc, filter.Param)
+
+	// for param get
+	baseRouter.NewDocRouter(&coral.Doc{
+		Path:        "param-get",
+		Description: "取param示例",
+		Input: coral.Checker{
+			"int":    "int",
+			"string": "string",
+			"data": coral.Checker{
+				"array": []string{"int"},
+				"list": []coral.Checker{
+					coral.Checker{
+						"ele": "string"}}}}},
+		filter.ParamGet)
 ```
-当server运行时，访问/doc可以看到全部路由doc，也可以点击对应的doc节点查看子路由的doc。
+当server运行时，访问/doc可以看到全部路由doc，也可以点击对应的doc节点查看子路由的doc。从上面路由定义的代码中，还可以看到当需要传递的参数较为复杂时，使用data包装json的形式更为妥当。
 # Config
 coral支持配置文件读入，目前实现了ini文件的读取。
 ```

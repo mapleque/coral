@@ -74,6 +74,116 @@ type Response struct {
 	Errmsg string      `json:"errmsg"`
 }
 
+// rule: TYPE + (n)|[m,n]|{a,b,c...} + #STATUS_* + ;NOTE
+func Rule(rule string, status int, note string) string {
+	ret := rule
+	if status > 0 {
+		ret = ret + "#" + strconv.Itoa(status)
+	}
+	if note != "" {
+		ret = ret + ";" + note
+	}
+	return ret
+}
+
+// 类型转换，任何类型转成int
+func Int(param interface{}) int {
+	switch ret := param.(type) {
+	case int:
+		return ret
+	case int64:
+		return int(ret)
+	case float64:
+		return int(ret)
+	case string:
+		r, err := strconv.Atoi(ret)
+		if err != nil {
+			Error("param type change error", ret, err.Error())
+		}
+		return r
+	case bool:
+		if ret {
+			return 1
+		} else {
+			return 0
+		}
+	default:
+		Error("param type change to int error",
+			ret, fmt.Sprintf("%T", ret))
+		return 0
+	}
+}
+
+// 类型转换，任何类型转成bool
+func Bool(param interface{}) bool {
+	switch ret := param.(type) {
+	case bool:
+		return ret
+	case int:
+		if ret > 0 {
+			return true
+		} else {
+			return false
+		}
+	case string:
+		switch ret {
+		case "1", "true", "y", "on", "yes":
+			return true
+		case "0", "false", "n", "off", "no":
+			return false
+		default:
+			Error("param type change to bool error", ret, "unknown type")
+		}
+		return false
+	default:
+		Error("param type change to bool error",
+			ret, fmt.Sprintf("%T", ret))
+		return false
+	}
+}
+
+// 类型转换，任何类型转成string
+func String(param interface{}) string {
+	switch ret := param.(type) {
+	case string:
+		return ret
+	case int:
+		return strconv.Itoa(ret)
+	case bool:
+		if ret {
+			return "1"
+		} else {
+			return "0"
+		}
+	default:
+		Error("param type change to string error",
+			ret, fmt.Sprintf("%T", ret))
+		return ""
+	}
+}
+
+func Map(param interface{}) map[string]interface{} {
+	switch ret := param.(type) {
+	case map[string]interface{}:
+		return ret
+	default:
+		Error("param type change to map error",
+			ret, fmt.Sprintf("%T", ret))
+		return nil
+	}
+}
+
+func Array(param interface{}) []interface{} {
+	switch ret := param.(type) {
+	case []interface{}:
+		return ret
+	default:
+		Error("param type change to map error",
+			ret, fmt.Sprintf("%T", ret))
+		return nil
+	}
+}
+
 // NewServer返回一个Server对象引用
 func NewServer(host string) *Server {
 	Info("coral start now ...")
@@ -372,11 +482,11 @@ func (doc *Doc) genView() string {
 		ret = ret + "<p>" + doc.Description + "</p>"
 	}
 	if doc.Input != nil {
-		ret = ret + "<p><- input</p>"
+		ret = ret + "<p>:- input</p>"
 		ret = ret + "<pre>{\n" + doc.Input.genView("\t") + "}</pre>"
 	}
 	if doc.Output != nil {
-		ret = ret + "<h4>-> output</h4>"
+		ret = ret + "<p>:- output</p>"
 		ret = ret + "<pre>{\n" + doc.Output.genView("\t") + "}</pre>"
 	}
 	return ret
@@ -522,7 +632,6 @@ func checkRule(param interface{}, rule string) (bool, int) {
 	return true, STATUS_SUCCESS
 }
 
-// single rule: TYPE + (n)|[m,n]|{a,b,c...} + #STATUS_*
 // string			任意字符串
 // string(n)		长度为n的字符串
 // string[m,n]		长度不小于m不大于n的字符串
@@ -536,8 +645,10 @@ func checkRule(param interface{}, rule string) (bool, int) {
 // md5
 func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 	var status int
+	// 提取;后边的注释
+	tmparr := strings.Split(singleRule, ";")
 	// 提取#后面的错误码
-	tmparr := strings.Split(singleRule, "#")
+	tmparr = strings.Split(tmparr[0], "#")
 	if len(tmparr) > 1 {
 		singleRule = tmparr[0]
 		st, err := strconv.Atoi(tmparr[1])

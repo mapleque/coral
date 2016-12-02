@@ -31,25 +31,51 @@ func initRouter(server *coral.Server) {
 		Path:        "doc-example",
 		Description: "a example api",
 		Input: coral.Checker{
-			"a": "string(2)",
+			"a": coral.Rule("string(2)", STATUS_INVALID_INPUT, "字符串"),
 			"b": coral.Checker{
-				"c": "int[1,10]"},
+				"c": coral.Rule(
+					"int[1,10]",
+					STATUS_INVALID_INPUT,
+					"1-10的int")},
 			"data": coral.Checker{
 				"list": []coral.Checker{
-					coral.Checker{"e": "string"}},
-				"pages": []string{"int"}}},
+					coral.Checker{
+						"e": coral.Rule(
+							"string",
+							STATUS_INVALID_INPUT,
+							"数组里每个元素都是这样的对象")}},
+				"pages": []string{coral.Rule(
+					"int",
+					STATUS_INVALID_INPUT,
+					"素组每个元素都是int")}}},
 		Output: coral.Checker{
-			"status": "int",
+			"status": coral.Rule(
+				"int",
+				STATUS_INVALID_OUTPUT,
+				"对应的说明"),
 			"data": coral.Checker{
-				"a": "string(2)",
+				"a": "string(2)", // 也可以直接写
 				"b": coral.Checker{
-					"c": "int[1,10]"},
+					"c": coral.Rule("int[1,10]", 0, "")}, // 也可以省略说明
 				"data": coral.Checker{
 					"list": []coral.Checker{
 						coral.Checker{"e": "string"}},
 					"pages": []string{"int"}}},
 			"errmsg": "string"}}
 	baseRouter.NewDocRouter(doc, filter.Param)
+	// for param get
+	baseRouter.NewDocRouter(&coral.Doc{
+		Path:        "param-get",
+		Description: "取param示例",
+		Input: coral.Checker{
+			"int":    "int",
+			"string": "string",
+			"data": coral.Checker{
+				"array": []string{"int"},
+				"list": []coral.Checker{
+					coral.Checker{
+						"ele": "string"}}}}},
+		filter.ParamGet)
 
 	// log
 	baseRouter.NewRouter("log", filter.Log)
