@@ -338,8 +338,9 @@ func (router *Router) genDocHandler() func(http.ResponseWriter, *http.Request) {
 		}
 		ret = "<!doctype html>" +
 			"<title>api doc - general by coral</title>" +
-			"<h1>Api doc - general by coral</h1>" +
-			ret
+			"<h1>Api doc</h1>" +
+			ret +
+			"<hr><p>@general by coral</p>"
 		w.Write([]byte(ret))
 	}
 }
@@ -400,7 +401,7 @@ func (field Checker) genView(prefix string) string {
 		switch value := value.(type) {
 		case Checker:
 			ret = ret + prefix + key +
-				": {\n" + value.genView(prefix+"\t") + "\n" + prefix + "}"
+				": {\n" + value.genView(prefix+"\t") + prefix + "}"
 			break
 		case string:
 			ret = ret + prefix + key + ": " + value
