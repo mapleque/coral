@@ -303,7 +303,6 @@ func newRouter(path string, filterChains ...Filter) *Router {
 	router.docPath = path + docPath
 
 	doc := &Doc{}
-	doc.Description = "no description in simple router"
 	doc.Path = router.path
 	doc.docPath = router.docPath
 	router.doc = doc
@@ -368,7 +367,9 @@ func (doc *Doc) genView() string {
 		"<a href='" + doc.docPath +
 		"' title='click to see sub tree'>@path:</a> " + doc.Path +
 		"</p>"
-	ret = ret + "<p>" + doc.Description + "</p>"
+	if doc.Description != "" {
+		ret = ret + "<p>" + doc.Description + "</p>"
+	}
 	if doc.Input != nil {
 		ret = ret + "<p><- input</p>"
 		ret = ret + "<pre>{\n" + doc.Input.genView("\t") + "}</pre>"
