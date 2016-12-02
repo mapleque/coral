@@ -23,7 +23,7 @@ func initRouter(server *coral.Server) {
 	baseRouter := server.NewRouter("/", filter.Index)
 
 	// /param?<params>
-	paramRouter := baseRouter.NewRouter("param", filter.Param)
+	baseRouter.NewRouter("param", filter.Param)
 
 	// doc & checker
 	// /doc-example?a=aa&b={"c":1}&data={"list":[{"e":"2"},{"e":"0"}],"pages":[0,2,3]}
@@ -65,15 +65,7 @@ func initRouter(server *coral.Server) {
 
 	// /redis
 	redisRouter := baseRouter.NewRouter("redis", filter.Redis)
-	redisRouter.NewRouter("set",
-		r.Check(coral.V{
-			"key": r.IsString,
-			"val": r.IsInt}),
-		filter.Set)
-	redisRouter.NewRouter("get",
-		r.Check(coral.V{
-			"key": r.IsString}),
-		filter.Get)
+	redisRouter.NewRouter("set", filter.Get)
 }
 
 func initDB() {
