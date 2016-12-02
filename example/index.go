@@ -13,47 +13,42 @@ import (
 	filter "github.com/coral/example/filter"
 )
 
-var _config config.Configer
+var conf config.Configer
 
 /**
  * initRouter 方法，定义服务全部接口、参数校验、并指定过滤器链
  */
 func initRouter(server *coral.Server) {
-	r := coral.ParamChecker
 	// /
 	baseRouter := server.NewRouter("/", filter.Index)
 
 	// /param?<params>
 	paramRouter := baseRouter.NewRouter("param", filter.Param)
-	// /param/check?a=1&b=2&c=1
-	paramRouter.NewRouter(
-		"check",
-		r.Check(coral.V{
-			"a": r.IsString,
-			"b": r.IsInt,
-			"c": r.IsBool}),
-		filter.Param,
-	)
-	// TODO 更复杂的check
 
-	// doc
+	// doc & checker
+	// /doc-example?a=aa&b={"c":1}&data={"list":[{"e":"2"},{"e":"0"}],"pages":[0,2,3]}
 	doc := &coral.Doc{
 		Path:        "doc-example",
 		Description: "a example api",
-		Input: coral.DocField{
-			"a": "string&minlen:2&maxlen:2"},
-		Output: coral.DocField{
+		Input: coral.Checker{
+			"a": "string(2)",
+			"b": coral.Checker{
+				"c": "int[1,10]"},
+			"data": coral.Checker{
+				"list": []coral.Checker{
+					coral.Checker{"e": "string"}},
+				"pages": []string{"int"}}},
+		Output: coral.Checker{
 			"status": "int",
-			"data": coral.DocField{
-				"a": "string&minlen:2&maxlen:2",
-				"b": coral.DocField{
-					"c": "int&max:10&min:1"},
-				"list": []coral.DocField{
-					coral.DocField{"e": "int"},
-					coral.DocField{"e": "int"},
-					coral.DocField{"e": "int"},
-					coral.DocField{"e": "int"}}},
-			"errmsg": "optional"}}
+			"data": coral.Checker{
+				"a": "string(2)",
+				"b": coral.Checker{
+					"c": "int[1,10]"},
+				"data": coral.Checker{
+					"list": []coral.Checker{
+						coral.Checker{"e": "string"}},
+					"pages": []string{"int"}}},
+			"errmsg": "string"}}
 	baseRouter.NewDocRouter(doc, filter.Param)
 
 	// log
@@ -85,9 +80,9 @@ func initDB() {
 	// add default db
 	db.DB.AddDB(
 		DEF_CORAL_DB,
-		_config.Get("db.DEFAULT_DB_DSN"),
-		_config.Int("db.DEFAULT_DB_MAX_CONNECTION"),
-		_config.Int("db.DEFAULT_DB_MAX_IDLE"))
+		conf.Get("db.DEFAULT_DB_DSN"),
+		conf.Int("db.DEFAULT_DB_MAX_CONNECTION"),
+		conf.Int("db.DEFAULT_DB_MAX_IDLE"))
 
 	// add other db
 	// ...
@@ -97,10 +92,10 @@ func initRedis() {
 	// add default cache
 	cache.Cache.AddRedis(
 		DEF_CORAL_REDIS,
-		_config.Get("cache.DEFAULT_REDIS_SERVER"),
-		_config.Get("cache.DEFAULT_REDIS_AUTH"),
-		_config.Int("cache.DEFAULT_REDIS_MAX_CONNECTION"),
-		_config.Int("cache.DEFAULT_REDIS_MAX_IDLE"))
+		conf.Get("cache.DEFAULT_REDIS_SERVER"),
+		conf.Get("cache.DEFAULT_REDIS_AUTH"),
+		conf.Int("cache.DEFAULT_REDIS_MAX_CONNECTION"),
+		conf.Int("cache.DEFAULT_REDIS_MAX_IDLE"))
 
 	// add other cache
 	// ...
@@ -110,22 +105,22 @@ func initLog() {
 	// add default logger
 	log.Log.AddLogger(
 		DEF_CORAL_LOG,
-		_config.Get("log.DEFAULT_LOG_PATH"),
-		_config.Int("log.DEFAULT_LOG_MAX_NUMBER"),
-		_config.Int64("log.DEFAULT_LOG_MAX_SIZE"),
-		_config.Int("log.DEFAULT_LOG_MAX_LEVEL"),
-		_config.Int("log.DEFAULT_LOG_MIN_LEVEL"))
+		conf.Get("log.DEFAULT_LOG_PATH"),
+		conf.Int("log.DEFAULT_LOG_MAX_NUMBER"),
+		conf.Int64("log.DEFAULT_LOG_MAX_SIZE"),
+		conf.Int("log.DEFAULT_LOG_MAX_LEVEL"),
+		conf.Int("log.DEFAULT_LOG_MIN_LEVEL"))
 
 	// add other logger
 	// ...
 }
 
 func main() {
-	conf := flag.String("ini", "", "your config file")
+	confFile := flag.String("ini", "", "your config file")
 	flag.Parse()
-	if *conf != "" {
-		config.AddConfiger(config.INI, DEF_CORAL_CONF, *conf)
-		_config = config.Use(DEF_CORAL_CONF)
+	if *confFile != "" {
+		config.AddConfiger(config.INI, DEF_CORAL_CONF, *confFile)
+		conf = config.Use(DEF_CORAL_CONF)
 
 		// init log
 		initLog()
@@ -137,7 +132,7 @@ func main() {
 		initRedis()
 
 		// new server
-		server := coral.NewServer(_config.Get("server.HOST"))
+		server := coral.NewServer(conf.Get("server.HOST"))
 
 		// new router
 		initRouter(server)

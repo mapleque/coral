@@ -6,14 +6,10 @@ coral实现了路由和路由组的包装，实现了参数校验和过滤器链
 ```
 server := coral.NewServer(":8080")
 ```
-server和router都提供了NewRouter方法，可以为每个指定的Path定义不同的处理策略。router同样也支持链式处理策略，这个在后面的部分将会被看到。
+server和router都提供了NewRouter方法，可以为每个指定的Path定义不同的处理策略。router可以指定多个filter链式处理。
 ```
-// curl http://localhost:8080/
-// hello coral
 baseRouter := server.NewRouter("/", api.Index)
 
-// curl http://localhost:8080/param?<params>
-// <params>
 paramRouter := baseRouter.NewRouter("param", api.Param)
 ```
 其中由router创建的router属于子路径，path将会自动加上父router的path。
@@ -43,55 +39,82 @@ func Param(context *Context) bool {
 	return true
 }
 ```
-# Param
-coral提供了基本参数校验方法以及一些列用于校验的方法。
-```
-r := &R{}
-
-// curl http://localhost:8080/param/check?a=1&b=2&c=1
-// {"a":"1", "b":2, "c":"1"}
-paramRouter.NewRouter("check", r.Check(V{"a": r.IsString, "b": r.IsInt, "c": r.IsBool}), api.Param)
-```
-事实上，http包对于从请求获取的参数，都是string类型，因此在参数校验的方法里边，特意加入了强制类型转换逻辑，校验方法会根据用户所要求的类型尝试转换参数，如果成功就赋值给context.Params否则直接返回参数错误提示。这样一来，用户在自己的Filter中就可以直接使用期望的参数类型了。
-这里的check方法，实际上返回的就是一个Filter，因此用户完全可以自己实现参数校验，就像Filter所干的事情一样。
-值得注意的是，这里使用了前面提到的router对Filter的链式调用。
 # Doc
 coral支持通过预定义的doc信息，生成api doc，同时也会根据doc校验输入和输出。
 ```
-	// doc
-	doc := &coral.Doc{
-		Path:        "doc-example",
-		Description: "a example api",
-		Input: coral.DocField{
-			"a": "string&minlen:2&maxlen:2"},
-		Output: coral.DocField{
-			"status": "int",
-			"data": coral.DocField{
-				"a": "string&minlen:2&maxlen:2",
-				"b": coral.DocField{
-					"c": "int&max:10&min:1"},
-				"list": []coral.DocField{
-					coral.DocField{"e": "int"},
-					coral.DocField{"e": "int"},
-					coral.DocField{"e": "int"},
-					coral.DocField{"e": "int"}}},
-			"errmsg": "optional"}}
-	baseRouter.NewDocRouter(doc, filter.Param)
+// /doc-example?a=aa&b={"c":1}&data={"list":[{"e":"2"},{"e":"0"}],"pages":[0,2,3]}
+doc := &coral.Doc{
+    Path:        "doc-example",
+    Description: "a example api",
+    Input: coral.Checker{
+        "a": "string(2)",
+        "b": coral.Checker{
+            "c": "int[1,10]"},
+        "data": coral.Checker{
+            "list": []coral.Checker{
+                coral.Checker{"e": "string"}},
+            "pages": []string{"int"}}},
+    Output: coral.Checker{
+        "status": "int",
+        "data": coral.Checker{
+            "a": "string(2)",
+            "b": coral.Checker{
+                "c": "int[1,10]"},
+            "data": coral.Checker{
+                "list": []coral.Checker{
+                    coral.Checker{"e": "string"}},
+                "pages": []string{"int"}}},
+        "errmsg": "string"}}
+baseRouter.NewDocRouter(doc, filter.Param)
 ```
-当server运行时，访问/doc可以看到全部路由doc，也可以点击对应的doc节点查看子路由的doc
+当server运行时，访问/doc可以看到全部路由doc，也可以点击对应的doc节点查看子路由的doc。
+# Config
+coral支持配置文件读入，目前实现了ini文件的读取。
+```
+var conf config.Configer
+func main() {
+	confFile := flag.String("ini", "", "your config file")
+	flag.Parse()
+	if *confFile != "" {
+		config.AddConfiger(config.INI, DEF_CORAL_CONF, *confFile)
+		conf = config.Use(DEF_CORAL_CONF)
+
+		// init log
+		initLog()
+
+		// init db
+		initDB()
+
+		// init redis
+		initRedis()
+
+		// new server
+		server := coral.NewServer(conf.Get("server.HOST"))
+
+		// new router
+		initRouter(server)
+
+		// start server
+		server.Run()
+	} else {
+		panic("run with -h to find usage")
+	}
+}
+```
+这里通过flag传入文件路径，初始化了一个configer，所以启动server的命令需要加上对应的参数。
+```
+go run index.go --ini config/config.ini
+```
 # Mysql
 Mysql驱动选用了github.com/go-sql-driver/mysql，框架db包对其操作进行了封装，用户需要在启动server之前初始化并添加自己的DB，然后通过一个全局变量DB就可以调用对应sql方法进行数据库操作。
 ```
-// 初始化db的方法，在启动server的时候调用一次即可
 func initDB() {
-	// init db pool
-	dbPool := db.InitDB()
 	// add default db
-	dbPool.AddDB(
-		DEF_DEFAULT_DB,
-		config.DEFAULT_DB_DSN,
-		config.DEFAULT_DB_MAX_CONNECTION,
-		config.DEFAULT_DB_MAX_IDLE)
+	db.DB.AddDB(
+		DEF_CORAL_DB,
+		conf.Get("db.DEF_CORAL_DB_DSN"),
+		conf.Int("db.DEF_CORAL_DB_MAX_CONNECTION"),
+		conf.Int("db.DEF_CORAL_DB_MAX_IDLE"))
 
 	// add other db
 	// ...
@@ -109,7 +132,7 @@ func initDB() {
 // 插入数据，可以直接使用DBPool对象操作数据库
 func Insert(context *Context) bool {
 	ret := DB.Insert(
-		DEFAULT_DB,
+		DEF_CORAL_DB,
 		`INSERT INTO coral (name, type, status, flag, rate, additional, time)
 		VALUES (?,?,?,?,?,?,?)`,
 		"coral", "a", 1, true, 0.99, "中文", time.Unix(time.Now().Unix(), 0).Format("2006-01-02 15:04:05"))
@@ -118,7 +141,7 @@ func Insert(context *Context) bool {
 }
 // 查询数据，也可以用DBquery对象操作数据库
 func Select(context *Context) bool {
-	conn := DB.UseDB(DEFAULT_DB)
+	conn := DB.UseDB(DEF_CORAL_DB)
 	context.Data = conn.Select(
 		"SELECT * FROM coral WHERE name = ?",
 		"coral")
@@ -126,7 +149,7 @@ func Select(context *Context) bool {
 }
 // 事物
 func TransCommit(context *Context) bool {
-	trans := DB.Begin(DEFAULT_DB)
+	trans := DB.Begin(DEF_CORAL_DB)
 	ret := trans.Update(
 		"UPDATE coral SET status = ? WHERE name = ?",
 		1, "coral")
@@ -143,15 +166,13 @@ func TransCommit(context *Context) bool {
 Redis驱动选用了github.com/garyburd/redigo/redis，框架cache包对其进行了封装，用户需要再启动server之前初始化并添加自己的redis，然后通过全局变量Cache就可以调用Set或者Get进行操作。
 ```
 func initRedis() {
-	// init cache pool
-	cachePool := cache.InitCache()
 	// add default cache
-	cachePool.AddRedis(
-		config.DEFAULT_REDIS,
-		config.DEFAULT_REDIS_SERVER,
-		config.DEFAULT_REDIS_AUTH,
-		config.DEFAULT_REDIS_MAX_CONNECTION,
-		config.DEFAULT_REDIS_MAX_IDLE)
+	cache.Cache.AddRedis(
+		DEF_CORAL_REDIS,
+		conf.Get("cache.DEFAULT_REDIS_SERVER"),
+		conf.Get("cache.DEFAULT_REDIS_AUTH"),
+		conf.Int("cache.DEFAULT_REDIS_MAX_CONNECTION"),
+		conf.Int("cache.DEFAULT_REDIS_MAX_IDLE"))
 
 	// add other cache
 	// ...
@@ -170,7 +191,7 @@ func Set(context *Context) bool {
 	param := context.Params
 	key := param["key"].(string)
 	val := param["val"]
-	ret := Cache.Set(DEFAULT_REDIS, key, val)
+	ret := Cache.Set(DEF_CORAL_REDIS, key, val)
 	context.Data = ret
 	return true
 }
@@ -178,7 +199,7 @@ func Set(context *Context) bool {
 func Get(context *Context) bool {
 	param := context.Params
 	key := param["key"].(string)
-	context.Data = Cache.Get(DEFAULT_REDIS, key)
+	context.Data = Cache.Get(DEF_CORAL_REDIS, key)
 	return true
 }
 ```
@@ -187,16 +208,17 @@ Log模块实现了日志分级输出，日志文件限制大小，自动循环�
 其用法与db模块类似，在启动server的时候初始化一次，在程序中使用全局变量Log或者全局方法Info等输出日志。
 ```
 func initLog() {
-	logPool := log.InitLog()
-	logPool.AddLogger(
-		config.DEFAULT_LOG,
-		config.DEFAULT_LOG_PATH,
-		config.DEFAULT_LOG_MAX_NUMBER,
-		config.DEFAULT_LOG_MAX_SIZE,
-		config.DEFAULT_LOG_MAX_LEVEL,
-		config.DEFAULT_LOG_MIN_LEVEL)
-    // add other logger
-    // ...
+	// add default logger
+	log.Log.AddLogger(
+		DEF_CORAL_LOG,
+		conf.Get("log.DEFAULT_LOG_PATH"),
+		conf.Int("log.DEFAULT_LOG_MAX_NUMBER"),
+		conf.Int64("log.DEFAULT_LOG_MAX_SIZE"),
+		conf.Int("log.DEFAULT_LOG_MAX_LEVEL"),
+		conf.Int("log.DEFAULT_LOG_MIN_LEVEL"))
+
+	// add other logger
+	// ...
 }
 ```
 添加log的路由：

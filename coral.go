@@ -2,8 +2,11 @@ package coral
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	. "github.com/coral/log"
@@ -29,15 +32,17 @@ type Router struct {
 	docHandler func(http.ResponseWriter, *http.Request)
 }
 
+// Doc 用于生成api doc
+// 在创建router的时候可以作为参数传入
 type Doc struct {
 	Path        string
 	Description string
 	docPath     string
-	Input       DocField
-	Output      DocField
+	Input       Checker
+	Output      Checker
 }
 
-type DocField map[string]interface{}
+type Checker map[string]interface{}
 
 // Filter 是一个接口过滤器
 // 在创建router的时候传入的filterChains中的每一个元素都必须是这一类型
@@ -186,19 +191,33 @@ func (router *Router) genHandler(filterChains ...Filter) func(http.ResponseWrite
 		// deal params
 		context.Params = router.processParams(req)
 
+		ret := true
 		response := &Response{}
-		for _, filter := range filterChains {
-			if !filter(context) {
-				Warn("filter break")
-				if context.Status == 0 {
-					response.Status = STATUS_ERROR_UNKNOWN
-				}
-				if context.Errmsg == "" {
-					response.Errmsg = "filter return false"
-				}
-				break
+
+		// param check if need
+		if router.doc.Input != nil {
+			ret, context.Status = router.doc.Input.check(context.Params)
+			if !ret {
+				Debug("input check faild")
 			}
 		}
+
+		if ret {
+			for _, filter := range filterChains {
+				ret = filter(context)
+				if !ret {
+					Warn("filter break", filter)
+					if context.Status == 0 {
+						response.Status = STATUS_ERROR_UNKNOWN
+					}
+					if context.Errmsg == "" {
+						response.Errmsg = "filter return false"
+					}
+					break
+				}
+			}
+		}
+
 		if context.Raw {
 			Info(
 				"<-",
@@ -217,6 +236,21 @@ func (router *Router) genHandler(filterChains ...Filter) func(http.ResponseWrite
 			if context.Errmsg != "" {
 				response.Errmsg = context.Errmsg
 			}
+			// check response
+			if ret && router.doc.Output != nil {
+				resp := map[string]interface{}{
+					"status": response.Status,
+					"data":   response.Data,
+					"errmsg": response.Errmsg}
+				ret, context.Status = router.doc.Output.check(resp)
+				if !ret {
+					Debug("output check faild")
+				}
+			}
+			if context.Status != 0 {
+				response.Status = context.Status
+			}
+
 			out, err := json.Marshal(response)
 			if err != nil {
 				Error(err)
@@ -236,6 +270,7 @@ func (router *Router) genHandler(filterChains ...Filter) func(http.ResponseWrite
 	}
 }
 
+// 处理参数，从请求中提取所有参数
 func (router *Router) processParams(req *http.Request) map[string]interface{} {
 	err := req.ParseForm()
 	if err != nil {
@@ -244,7 +279,12 @@ func (router *Router) processParams(req *http.Request) map[string]interface{} {
 	params := make(map[string]interface{})
 	for k, vs := range req.Form {
 		if len(vs) > 0 {
-			params[k] = vs[0]
+			var dat map[string]interface{}
+			if err := json.Unmarshal([]byte(vs[0]), &dat); err != nil {
+				params[k] = vs[0]
+			} else {
+				params[k] = dat
+			}
 		} else {
 			params[k] = ""
 		}
@@ -252,6 +292,7 @@ func (router *Router) processParams(req *http.Request) map[string]interface{} {
 	return params
 }
 
+// 创建一个路由
 func newRouter(path string, filterChains ...Filter) *Router {
 	router := &Router{}
 	router.path = path
@@ -272,6 +313,7 @@ func newRouter(path string, filterChains ...Filter) *Router {
 	return router
 }
 
+// 创建一个带有doc的路由
 func newDocRouter(doc *Doc, filterChains ...Filter) *Router {
 	router := &Router{}
 	router.path = doc.Path
@@ -287,7 +329,7 @@ func newDocRouter(doc *Doc, filterChains ...Filter) *Router {
 	return router
 }
 
-// genDocHandler write a doc view
+// genDocHandler 生成一个doc的页面
 func (router *Router) genDocHandler() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		docs := genDoc(router)
@@ -303,6 +345,7 @@ func (router *Router) genDocHandler() func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+// 递归生成路由的doc
 func genDoc(router *Router) []*Doc {
 	var ret []*Doc
 	ret = append(ret, router.doc)
@@ -315,6 +358,7 @@ func genDoc(router *Router) []*Doc {
 	return ret
 }
 
+// 生成doc的html
 func (doc *Doc) genView() string {
 	if doc == nil {
 		return ""
@@ -336,7 +380,8 @@ func (doc *Doc) genView() string {
 	return ret
 }
 
-func (field DocField) genView(prefix string) string {
+// 生成checker的doc
+func (field Checker) genView(prefix string) string {
 	if field == nil {
 		return ""
 	}
@@ -352,13 +397,25 @@ func (field DocField) genView(prefix string) string {
 			ret = ret + ",\n"
 		}
 		switch value := value.(type) {
-		case DocField:
-			ret = ret + prefix + key + ": {\n" + value.genView(prefix+"\t") + "\n" + prefix + "}"
+		case Checker:
+			ret = ret + prefix + key +
+				": {\n" + value.genView(prefix+"\t") + "\n" + prefix + "}"
 			break
 		case string:
 			ret = ret + prefix + key + ": " + value
 			break
-		case []DocField:
+		case []string:
+			ret = ret + prefix + key + ": ["
+			list := ""
+			for _, sf := range value {
+				if list != "" {
+					list = list + ","
+				}
+				list = list + sf
+			}
+			ret = ret + list + ",...]"
+			break
+		case []Checker:
 			ret = ret + prefix + key + ": ["
 			list := ""
 			for _, sf := range value {
@@ -367,11 +424,271 @@ func (field DocField) genView(prefix string) string {
 				}
 				list = list + "{\n" + sf.genView(prefix+"\t") + prefix + "}"
 			}
-			ret = ret + list + "]"
+			ret = ret + list + ",...]"
 			break
 		default:
-			Error("doc build error: unexpect rule", value)
+			Error("doc build error: unexpect rule", key, value)
 		}
 	}
 	return ret + "\n"
+}
+
+// check 检查参数是否合法
+func (field Checker) check(params map[string]interface{}) (bool, int) {
+	for key, value := range field {
+		switch value := value.(type) {
+		case Checker:
+			switch ele := params[key].(type) {
+			case map[string]interface{}:
+				// 如果是嵌套，那么参数必须也是嵌套的
+				ret, status := value.check(ele)
+				if !ret {
+					return ret, status
+				}
+			default:
+				Debug("param check", key, ele)
+				return false, STATUS_INVALID_PARAM
+			}
+			break
+		case string:
+			ret, status := checkRule(params[key], value)
+			if !ret {
+				return ret, status
+			}
+			break
+		case []string:
+			if len(value) < 1 {
+				Error("unexpect checker rule", key, value)
+				break
+			}
+			switch eles := params[key].(type) {
+			case []interface{}:
+				for _, ele := range eles {
+					ret, status := checkRule(ele, value[0])
+					if !ret {
+						return ret, status
+					}
+				}
+				break
+			default:
+				Debug("param check", key, eles)
+				return false, STATUS_INVALID_PARAM
+			}
+			break
+		case []Checker:
+			// 如果是数组嵌套，那么只检查数组第一项的规则
+			if len(value) < 1 {
+				Error("unexpect checker rule", key, value)
+				break
+			}
+			switch eles := params[key].(type) {
+			case []interface{}:
+				// 还要保证要检验的参数也是数组
+				for _, ele := range eles {
+					switch ele := ele.(type) {
+					case map[string]interface{}:
+						// 数组里边的数也要求是嵌套的
+						ret, status := value[0].check(ele)
+						if !ret {
+							return ret, status
+						}
+					default:
+						Debug("param check", key, ele)
+						return false, STATUS_INVALID_PARAM
+					}
+				}
+				break
+			default:
+				Debug("param check", key, eles)
+				return false, STATUS_INVALID_PARAM
+			}
+			break
+		default:
+			Error("unexpect checker rule", key, value)
+		}
+	}
+	return true, STATUS_SUCCESS
+}
+
+func checkRule(param interface{}, rule string) (bool, int) {
+	rules := strings.Split(rule, "|")
+	for _, singleRule := range rules {
+		if ret, status := checkSingleRule(param, singleRule); !ret {
+			return ret, status
+		}
+	}
+	return true, STATUS_SUCCESS
+}
+
+// single rule: TYPE + (n)|[m,n]|{a,b,c...} + #STATUS_*
+// string			任意字符串
+// string(n)		长度为n的字符串
+// string[m,n]		长度不小于m不大于n的字符串
+// string{a,b,c}	a,b,c其中一个字符串
+// int				任意整数
+// int(n)			整数n
+// int[m,n]			不小于m不大于n的整数
+// int{a,b,c}		a,b,c其中一个整数
+// mobile
+// email
+// md5
+func checkSingleRule(param interface{}, singleRule string) (bool, int) {
+	var status int
+	// 提取#后面的错误码
+	tmparr := strings.Split(singleRule, "#")
+	if len(tmparr) > 1 {
+		singleRule = tmparr[0]
+		st, err := strconv.Atoi(tmparr[1])
+		if err != nil {
+			Debug("status not a int number", singleRule)
+			status = STATUS_INVALID_PARAM
+		} else {
+			status = st
+		}
+	} else {
+		status = STATUS_INVALID_PARAM
+	}
+
+	// 根据rule选择处理方式
+	// 只处理已知类型，位置类型的全部不能通过
+	switch {
+	case len(singleRule) >= 6 && singleRule[0:6] == "string":
+		// string只能是string
+		switch param := param.(type) {
+		case string:
+			if checkString(singleRule, param) {
+				return true, STATUS_SUCCESS
+			}
+			break
+		}
+		break
+	case len(singleRule) >= 3 && singleRule[0:3] == "int":
+		// int 可以是int, float64，也可以是string转int
+		switch param := param.(type) {
+		case float64:
+			if checkInt(singleRule, int(param)) {
+				return true, STATUS_SUCCESS
+			}
+			break
+		case int64:
+			if checkInt(singleRule, int(param)) {
+				return true, STATUS_SUCCESS
+			}
+			break
+		case int32:
+			if checkInt(singleRule, int(param)) {
+				return true, STATUS_SUCCESS
+			}
+			break
+		case int:
+			if checkInt(singleRule, param) {
+				return true, STATUS_SUCCESS
+			}
+		case string:
+			if param, err := strconv.Atoi(param); err != nil {
+				Debug("check rule faild", singleRule, param, err.Error())
+			} else {
+				if checkInt(singleRule, param) {
+					return true, STATUS_SUCCESS
+				}
+			}
+		default:
+			Debug("check rule faild", "unexpect int type", param, fmt.Sprintf("%T", param))
+		}
+		break
+	default:
+		Error("known rule", singleRule)
+	}
+	Debug("check rule faild", singleRule, param, fmt.Sprintf("%T", param))
+	return false, status
+}
+
+func checkString(rule, param string) bool {
+	rule = rule[6:]
+	if len(rule) > 0 {
+		switch rule[0] {
+		case '(':
+			return checkPoint(rule, len(param))
+		case '[':
+			return checkRange(rule, len(param))
+		case '{':
+			return checkIn(rule, param)
+		}
+	}
+	return true
+}
+func checkInt(rule string, param int) bool {
+	rule = rule[3:]
+	if len(rule) > 0 {
+		switch rule[0] {
+		case '(':
+			return checkPoint(rule, param)
+		case '[':
+			return checkRange(rule, param)
+		case '{':
+			return checkIn(rule, strconv.Itoa(param))
+		}
+	}
+	return true
+}
+func checkPoint(rule string, point int) bool {
+	if len(rule) > 2 && rule[0] == '(' && rule[len(rule)-1] == ')' {
+		rule = rule[1 : len(rule)-1]
+		if strconv.Itoa(point) != rule {
+			Debug("check point faild", rule, point)
+			return false
+		}
+	}
+	return true
+}
+func checkRange(rule string, point int) bool {
+	if len(rule) > 5 && rule[0] == '[' && rule[len(rule)-1] == ']' {
+		rule = rule[1 : len(rule)-1]
+		tmparr := strings.Split(rule, ",")
+		if len(tmparr) != 2 {
+			Debug("check range faild, invalid rule", rule, point)
+			return false
+		}
+		min, err := strconv.Atoi(tmparr[0])
+		if err != nil {
+			Debug("check range faild, invalid rule", rule, point, err.Error())
+			return false
+		}
+		max, err := strconv.Atoi(tmparr[1])
+		if err != nil {
+			Debug("check range faild, invalid rule", rule, point, err.Error())
+			return false
+		}
+		ret := true
+		if min >= 0 {
+			ret = point >= min
+		}
+		if max >= 0 {
+			ret = point <= max
+		}
+		if !ret {
+			Debug("check range faild", rule, point)
+			return false
+		}
+	}
+	return true
+}
+func checkIn(rule string, point string) bool {
+	if len(rule) > 2 && rule[0] == '{' && rule[len(rule)-1] == '}' {
+		rule = rule[1 : len(rule)-1]
+		tmparr := strings.Split(rule, ",")
+		if len(tmparr) < 1 {
+			return false
+		}
+		ret := false
+		for _, ex := range tmparr {
+			if point == ex {
+				ret = true
+			}
+		}
+		if !ret {
+			Debug("check in faild", rule, point)
+		}
+	}
+	return true
 }
