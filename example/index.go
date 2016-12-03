@@ -49,12 +49,15 @@ func initRouter(server *coral.Server) {
 					STATUS_INVALID_INPUT,
 					"素组每个元素都是int")}}},
 		Output: coral.Checker{
-			"status": coral.Rule(
-				"int",
-				STATUS_INVALID_OUTPUT,
-				"对应的说明"),
+			"status": coral.InStatus(
+				0,
+				STATUS_INVALID_INPUT,
+				STATUS_INVALID_OUTPUT),
 			"data": coral.Checker{
-				"a": "string(2)", // 也可以直接写
+				"a": coral.Rule(
+					"string(2)",
+					STATUS_INVALID_OUTPUT,
+					"输出也会检查"),
 				"b": coral.Checker{
 					"c": coral.Rule("int[1,10]", 0, "")}, // 也可以省略说明
 				"data": coral.Checker{

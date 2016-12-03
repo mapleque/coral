@@ -86,6 +86,15 @@ func Rule(rule string, status int, note string) string {
 	return ret
 }
 
+func InStatus(status ...int) string {
+	var arr []string
+	for _, st := range status {
+		arr = append(arr, strconv.Itoa(st))
+	}
+	ret := strings.Join(arr, ",")
+	return Rule("int{"+ret+"}", STATUS_INVALID_STATUS, "")
+}
+
 // 类型转换，任何类型转成int
 func Int(param interface{}) int {
 	switch ret := param.(type) {
