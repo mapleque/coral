@@ -81,7 +81,7 @@ func Rule(rule string, status int, note string) string {
 		ret = ret + "#" + strconv.Itoa(status)
 	}
 	if note != "" {
-		ret = ret + ";" + note
+		ret = ret + "<" + note + ">"
 	}
 	return ret
 }
@@ -655,7 +655,7 @@ func checkRule(param interface{}, rule string) (bool, int) {
 func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 	var status int
 	// 提取;后边的注释
-	tmparr := strings.Split(singleRule, ";")
+	tmparr := strings.Split(singleRule, "<")
 	// 提取#后面的错误码
 	tmparr = strings.Split(tmparr[0], "#")
 	if len(tmparr) > 1 {
