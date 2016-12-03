@@ -74,9 +74,16 @@ type Response struct {
 	Errmsg string      `json:"errmsg"`
 }
 
-func False() bool {
-	Debug("return false")
-	return false
+// bool 返回值
+func RTBool(rt bool) bool {
+	Debug("return debug")
+	return rt
+}
+
+// int 返回值
+func RTInt(rt int) int {
+	Debug("return debug")
+	return rt
 }
 
 // rule: TYPE + (n)|[m,n]|{a,b,c...} + #STATUS_* + <NOTE>
