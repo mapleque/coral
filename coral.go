@@ -87,6 +87,10 @@ func Rule(rule string, status int, note string) string {
 }
 
 func InStatus(status ...int) string {
+	status = append(status, STATUS_INVALID_PARAM)
+	status = append(status, STATUS_ERROR_DB)
+	status = append(status, STATUS_ERROR_UNKNOWN)
+	status = append(status, STATUS_SUCCESS)
 	var arr []string
 	for _, st := range status {
 		arr = append(arr, strconv.Itoa(st))
@@ -458,6 +462,24 @@ func (router *Router) genDocHandler() func(http.ResponseWriter, *http.Request) {
 		ret = "<!doctype html>" +
 			"<title>api doc - general by coral</title>" +
 			"<h1>Api doc</h1>" +
+			"<pre>" +
+			`
+#STATUS_*		若参数不满足要求，则返回错误码STATUS_*
+<NOTE>			参数相关说明
+
+string			任意字符串
+string(n)		长度为n的字符串
+string[m,n]		长度不小于m不大于n的字符串
+string{a,b,c}	a,b,c其中一个字符串
+int				任意整数
+int(n)			整数n
+int[m,n]		不小于m不大于n的整数
+int{a,b,c}		a,b,c其中一个整数
+mobile
+email
+md5
+` +
+			"</pre>" +
 			ret +
 			"<hr><p>@general by coral</p>"
 		w.Write([]byte(ret))

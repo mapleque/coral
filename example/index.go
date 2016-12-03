@@ -50,7 +50,6 @@ func initRouter(server *coral.Server) {
 					"素组每个元素都是int")}}},
 		Output: coral.Checker{
 			"status": coral.InStatus(
-				0,
 				STATUS_INVALID_INPUT,
 				STATUS_INVALID_OUTPUT),
 			"data": coral.Checker{
