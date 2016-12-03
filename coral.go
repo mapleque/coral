@@ -74,7 +74,12 @@ type Response struct {
 	Errmsg string      `json:"errmsg"`
 }
 
-// rule: TYPE + (n)|[m,n]|{a,b,c...} + #STATUS_* + ;NOTE
+func False() bool {
+	Debug("return false")
+	return false
+}
+
+// rule: TYPE + (n)|[m,n]|{a,b,c...} + #STATUS_* + <NOTE>
 func Rule(rule string, status int, note string) string {
 	ret := rule
 	if status > 0 {
