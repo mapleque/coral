@@ -476,7 +476,6 @@ int(n)			整数n
 int[m,n]		不小于m不大于n的整数
 int{a,b,c}		a,b,c其中一个整数
 mobile
-email
 md5
 ` +
 			"</pre>" +
@@ -672,7 +671,6 @@ func checkRule(param interface{}, rule string) (bool, int) {
 // int[m,n]			不小于m不大于n的整数
 // int{a,b,c}		a,b,c其中一个整数
 // mobile
-// email
 // md5
 func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 	var status int
@@ -740,8 +738,26 @@ func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 			Debug("check rule faild", "unexpect int type", param, fmt.Sprintf("%T", param))
 		}
 		break
+	case singleRule == "mobile":
+		switch param := param.(type) {
+		case string:
+			if len(param) == 11 {
+				return true, STATUS_SUCCESS
+			}
+		default:
+			Debug("check rule faild", singleRule, param, "mobile must be string")
+		}
+	case singleRule == "md5":
+		switch param := param.(type) {
+		case string:
+			if len(param) == 32 || len(param) == 64 {
+				return true, STATUS_SUCCESS
+			}
+		default:
+			Debug("check rule faild", singleRule, param, "md5 must be string")
+		}
 	default:
-		Error("known rule", singleRule)
+		Error("unknown rule", singleRule)
 	}
 	Debug("check rule faild", singleRule, param, fmt.Sprintf("%T", param))
 	return false, status
