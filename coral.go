@@ -98,17 +98,26 @@ func Rule(rule string, status int, note string) string {
 	return ret
 }
 
+func InString(str ...string) string {
+	return "string{" + strings.Join(str, ",") + "}"
+}
+
+func InInt(val ...int) string {
+	var arr []string
+	for _, st := range val {
+		arr = append(arr, strconv.Itoa(st))
+	}
+	ret := strings.Join(arr, ",")
+	return "int{" + ret + "}"
+}
+
 func InStatus(status ...int) string {
 	status = append(status, STATUS_INVALID_PARAM)
 	status = append(status, STATUS_ERROR_DB)
 	status = append(status, STATUS_ERROR_UNKNOWN)
 	status = append(status, STATUS_SUCCESS)
-	var arr []string
-	for _, st := range status {
-		arr = append(arr, strconv.Itoa(st))
-	}
-	ret := strings.Join(arr, ",")
-	return Rule("int{"+ret+"}", STATUS_INVALID_STATUS, "")
+	ret := InInt(status...)
+	return Rule(ret, STATUS_INVALID_STATUS, "")
 }
 
 // 类型转换，任何类型转成int
@@ -477,7 +486,7 @@ func (router *Router) genDocHandler() func(http.ResponseWriter, *http.Request) {
 			"<pre>" +
 			`
 #STATUS_*		若参数不满足要求，则返回错误码STATUS_*
-<NOTE>			参数相关说明
+&lt;NOTE&gt;			参数相关说明
 
 string			任意字符串
 string(n)		长度为n的字符串
