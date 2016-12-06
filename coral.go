@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -754,8 +755,8 @@ func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 	case singleRule == "mobile":
 		switch param := param.(type) {
 		case string:
-			if len(param) == 11 {
-				// TODO 数字规则
+			ret, _ := regexp.MatchString("\\d{11}", param)
+			if ret {
 				return true, STATUS_SUCCESS
 			}
 		default:
@@ -775,8 +776,9 @@ func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 	case singleRule == "datetime":
 		switch param := param.(type) {
 		case string:
-			if len(param) == 19 {
-				// TODO 格式规则
+			ret, _ := regexp.MatchString(
+				"^\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}", param)
+			if ret {
 				return true, STATUS_SUCCESS
 			}
 		default:
