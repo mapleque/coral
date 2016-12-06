@@ -496,6 +496,7 @@ int				任意整数
 int(n)			整数n
 int[m,n]		不小于m不大于n的整数
 int{a,b,c}		a,b,c其中一个整数
+datetime		YYYY-mm-dd HH:ii:ss
 mobile
 md5
 ` +
@@ -683,16 +684,6 @@ func checkRule(param interface{}, rule string) (bool, int) {
 	return true, STATUS_SUCCESS
 }
 
-// string			任意字符串
-// string(n)		长度为n的字符串
-// string[m,n]		长度不小于m不大于n的字符串
-// string{a,b,c}	a,b,c其中一个字符串
-// int				任意整数
-// int(n)			整数n
-// int[m,n]			不小于m不大于n的整数
-// int{a,b,c}		a,b,c其中一个整数
-// mobile
-// md5
 func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 	var status int
 	// 提取;后边的注释
@@ -756,17 +747,20 @@ func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 				}
 			}
 		default:
-			Debug("check rule faild", "unexpect int type", param, fmt.Sprintf("%T", param))
+			Debug("check rule faild",
+				"unexpect int type", param, fmt.Sprintf("%T", param))
 		}
 		break
 	case singleRule == "mobile":
 		switch param := param.(type) {
 		case string:
 			if len(param) == 11 {
+				// TODO 数字规则
 				return true, STATUS_SUCCESS
 			}
 		default:
-			Debug("check rule faild", singleRule, param, "mobile must be string")
+			Debug("check rule faild",
+				singleRule, param, "mobile must be string")
 		}
 	case singleRule == "md5":
 		switch param := param.(type) {
@@ -775,7 +769,19 @@ func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 				return true, STATUS_SUCCESS
 			}
 		default:
-			Debug("check rule faild", singleRule, param, "md5 must be string")
+			Debug("check rule faild",
+				singleRule, param, "md5 must be string")
+		}
+	case singleRule == "datetime":
+		switch param := param.(type) {
+		case string:
+			if len(param) == 19 {
+				// TODO 格式规则
+				return true, STATUS_SUCCESS
+			}
+		default:
+			Debug("check rule faild",
+				singleRule, param, "datetime must be string")
 		}
 	default:
 		Error("unknown rule", singleRule)
