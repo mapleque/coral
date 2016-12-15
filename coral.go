@@ -608,17 +608,19 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 				// 如果是嵌套，那么参数必须也是嵌套的
 				ret, status := value.check(ele)
 				if !ret {
-					return ret, status
+					Debug("param check", key, ele, value)
+					return false, status
 				}
 			default:
-				Debug("param check", key, ele)
+				Debug("param check", key, ele, value)
 				return false, STATUS_INVALID_PARAM
 			}
 			break
 		case string:
 			ret, status := checkRule(params[key], value)
 			if !ret {
-				return ret, status
+				Debug("param check", key, params[key], value)
+				return false, status
 			}
 			break
 		case []string:
@@ -631,7 +633,8 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 				for _, ele := range eles {
 					ret, status := checkRule(ele, value[0])
 					if !ret {
-						return ret, status
+						Debug("param check", key, ele, value[0])
+						return false, status
 					}
 				}
 				break
@@ -655,7 +658,8 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 						// 数组里边的数也要求是嵌套的
 						ret, status := value[0].check(ele)
 						if !ret {
-							return ret, status
+							Debug("param check", key, ele)
+							return false, status
 						}
 					default:
 						Debug("param check", key, ele)

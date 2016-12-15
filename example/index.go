@@ -136,7 +136,7 @@ func initLog() {
 }
 
 func main() {
-	confFile := flag.String("ini", "", "your config file")
+	confFile := flag.String("ini", "./config/config.ini", "your config file")
 	flag.Parse()
 	if *confFile != "" {
 		config.AddConfiger(config.INI, DEF_CORAL_CONF, *confFile)
