@@ -377,7 +377,11 @@ func (router *Router) genHandler(filterChains ...Filter) func(http.ResponseWrite
 			if context.Status != 0 {
 				response.Status = context.Status
 			}
-			response.Data = context.Data
+			if context.Data != nil {
+				response.Data = context.Data
+			} else {
+				response.Data = make(map[string]interface{})
+			}
 			if context.Errmsg != "" {
 				response.Errmsg = context.Errmsg
 			}
