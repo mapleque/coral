@@ -75,7 +75,7 @@ func Begin(database string) *DBTransaction {
 // Select 方法，返回查询结果数组
 func Select(
 	database, sql string,
-	params ...interface{}) map[string]interface{} {
+	params ...interface{}) []map[string]interface{} {
 
 	return DB.Pool[database].Select(sql, params...)
 }
@@ -111,7 +111,7 @@ func (dbq *DBQuery) Begin() *DBTransaction {
 // Select 方法，返回查询结果数组
 func (dbq *DBQuery) Select(
 	sql string,
-	params ...interface{}) map[string]interface{} {
+	params ...interface{}) []map[string]interface{} {
 
 	ret, err := dbq.conn.Query(sql, params...)
 	return processQueryRet(sql, ret, err)
@@ -138,7 +138,7 @@ func (dbq *DBQuery) Insert(
 // Select 方法，返回查询结果数组
 func (dbt *DBTransaction) Select(
 	sql string,
-	params ...interface{}) map[string]interface{} {
+	params ...interface{}) []map[string]interface{} {
 
 	ret, err := dbt.conn.Query(sql, params...)
 	return processQueryRet(sql, ret, err)
@@ -179,7 +179,8 @@ func (dbt *DBTransaction) Rollback() {
 }
 
 // 返回查询结果数组
-func processQueryRet(query string, rows *sql.Rows, err error) map[string]interface{} {
+func processQueryRet(
+	query string, rows *sql.Rows, err error) []map[string]interface{} {
 	if err != nil {
 		Error("db query error", query, err.Error())
 		return nil
@@ -224,7 +225,7 @@ func processInsertRet(query string, res sql.Result, err error) int64 {
 /**
  * processRows 方法，将返回的rows封装为字典数组
  */
-func processRows(rows *sql.Rows) (map[string]interface{}, error) {
+func processRows(rows *sql.Rows) ([]map[string]interface{}, error) {
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err
@@ -234,13 +235,14 @@ func processRows(rows *sql.Rows) (map[string]interface{}, error) {
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
-	var ret map[string]interface{}
-	ret = make(map[string]interface{})
+	var list []map[string]interface{}
 	for rows.Next() {
 		err = rows.Scan(scanArgs...)
 		if err != nil {
 			return nil, err
 		}
+		var ret map[string]interface{}
+		ret = make(map[string]interface{})
 		for i, col := range values {
 			if col == nil {
 				ret[columns[i]] = "null"
@@ -254,9 +256,10 @@ func processRows(rows *sql.Rows) (map[string]interface{}, error) {
 				}
 			}
 		}
+		list = append(list, ret)
 	}
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	return ret, nil
+	return list, nil
 }
