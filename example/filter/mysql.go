@@ -2,7 +2,7 @@ package filter
 
 import (
 	. "github.com/coral"
-	. "github.com/coral/db"
+	"github.com/coral/db"
 	. "github.com/coral/example/constant"
 
 	"time"
@@ -13,7 +13,7 @@ func Mysql(context *Context) bool {
 	return true
 }
 func Insert(context *Context) bool {
-	ret := DB.Insert(
+	ret := db.Insert(
 		DEF_CORAL_DB,
 		`INSERT INTO coral (name, type, status, flag, rate, additional, time)
 		VALUES (?,?,?,?,?,?,?)`,
@@ -22,7 +22,7 @@ func Insert(context *Context) bool {
 	return true
 }
 func Update(context *Context) bool {
-	ret := DB.Update(
+	ret := db.Update(
 		DEF_CORAL_DB,
 		"UPDATE coral SET status = ? WHERE name = ?",
 		2, "coral")
@@ -30,14 +30,14 @@ func Update(context *Context) bool {
 	return true
 }
 func Select(context *Context) bool {
-	conn := DB.UseDB(DEF_CORAL_DB)
+	conn := db.UseDB(DEF_CORAL_DB)
 	context.Data = conn.Select(
 		"SELECT * FROM coral WHERE name = ?",
 		"coral")
 	return true
 }
 func TransCommit(context *Context) bool {
-	trans := DB.Begin(DEF_CORAL_DB)
+	trans := db.Begin(DEF_CORAL_DB)
 	ret := trans.Update(
 		"UPDATE coral SET status = ? WHERE name = ?",
 		1, "coral")
@@ -51,7 +51,7 @@ func TransCommit(context *Context) bool {
 }
 
 func TransRollback(context *Context) bool {
-	trans := DB.Begin(DEF_CORAL_DB)
+	trans := db.Begin(DEF_CORAL_DB)
 	ret := trans.Update(
 		"UPDATE coral SET status = ? WHERE name = ?",
 		2, "coral")

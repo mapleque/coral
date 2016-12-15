@@ -66,7 +66,7 @@ func init() {
 }
 
 // 增加一个日志输出模块
-func (lp *LogPool) AddLogger(
+func AddLogger(
 	name, path string,
 	maxNumber int, maxSize int64,
 	maxLevel int, minLevel int) {
@@ -85,7 +85,7 @@ func (lp *LogPool) AddLogger(
 	logger.mux = new(sync.RWMutex)
 	logger.logger = log.New(logger.logFile, "", log.Ldate|log.Ltime)
 
-	lp.Pool[name] = logger
+	Log.Pool[name] = logger
 }
 
 // logInfo是为了可变参数输出而定义的接口数据类型

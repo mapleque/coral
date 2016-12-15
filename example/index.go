@@ -98,7 +98,7 @@ func initRouter(server *coral.Server) {
 
 func initDB() {
 	// add default db
-	db.DB.AddDB(
+	db.AddDB(
 		DEF_CORAL_DB,
 		conf.Get("db.DEFAULT_DB_DSN"),
 		conf.Int("db.DEFAULT_DB_MAX_CONNECTION"),
@@ -110,7 +110,7 @@ func initDB() {
 
 func initRedis() {
 	// add default cache
-	cache.Cache.AddRedis(
+	cache.AddRedis(
 		DEF_CORAL_REDIS,
 		conf.Get("cache.DEFAULT_REDIS_SERVER"),
 		conf.Get("cache.DEFAULT_REDIS_AUTH"),
@@ -123,7 +123,7 @@ func initRedis() {
 
 func initLog() {
 	// add default logger
-	log.Log.AddLogger(
+	log.AddLogger(
 		DEF_CORAL_LOG,
 		conf.Get("log.DEFAULT_LOG_PATH"),
 		conf.Int("log.DEFAULT_LOG_MAX_NUMBER"),

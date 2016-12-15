@@ -32,13 +32,13 @@ func init() {
 }
 
 // AddRedis 方法，添加一个redis实例
-func (cache *CachePool) AddRedis(
+func AddRedis(
 	name, server, auth string,
 	maxActive, maxIdle int) {
 	Info("add redis", name, server)
 	redis := &_Redis{}
 	redis.conn = newPool(server, auth, maxActive, maxIdle)
-	cache.Pool[name] = redis
+	Cache.Pool[name] = redis
 }
 
 func newPool(server, password string, maxActive, maxIdle int) *redis.Pool {
@@ -84,8 +84,8 @@ func (redis *_Redis) do(cmd string,
 }
 
 // Get 方法
-func (cache *CachePool) Get(name, key string) interface{} {
-	val, err := cache.Pool[name].do("GET", key)
+func Get(name, key string) interface{} {
+	val, err := Cache.Pool[name].do("GET", key)
 	if err != nil {
 		Error("redis get error", name, key, err.Error())
 		return nil
@@ -99,8 +99,8 @@ func (cache *CachePool) Get(name, key string) interface{} {
 }
 
 // Set 方法
-func (cache *CachePool) Set(name, key string, val interface{}) bool {
-	val, err := cache.Pool[name].do("SET", key, val)
+func Set(name, key string, val interface{}) bool {
+	val, err := Cache.Pool[name].do("SET", key, val)
 	if err != nil {
 		Error("redis set error", name, key, err.Error())
 		return false
@@ -109,8 +109,8 @@ func (cache *CachePool) Set(name, key string, val interface{}) bool {
 }
 
 // Expire 方法
-func (cache *CachePool) Expire(name, key string, expire int) bool {
-	val, err := cache.Pool[name].do("EXPIRE", key, expire)
+func Expire(name, key string, expire int) bool {
+	val, err := Cache.Pool[name].do("EXPIRE", key, expire)
 	if err != nil {
 		Error("redis set error", name, key, err.Error())
 		return false

@@ -40,7 +40,7 @@ func init() {
 /**
  * AddDB 方法，添加一个database，并且在启动前验证其连通性
  */
-func (db *DBPool) AddDB(name, dsn string, maxOpenConns, maxIdleConns int) {
+func AddDB(name, dsn string, maxOpenConns, maxIdleConns int) {
 	Info("add db", name, dsn)
 	dbConn, err := sql.Open("mysql", dsn)
 	if err != nil {
@@ -59,41 +59,41 @@ func (db *DBPool) AddDB(name, dsn string, maxOpenConns, maxIdleConns int) {
 	dbQuery := &DBQuery{}
 	dbQuery.conn = dbConn
 	dbQuery.database = name
-	db.Pool[name] = dbQuery
+	DB.Pool[name] = dbQuery
 }
 
 // UserDB 方法，返回DBQuery对象
-func (db *DBPool) UseDB(database string) *DBQuery {
-	return db.Pool[database]
+func UseDB(database string) *DBQuery {
+	return DB.Pool[database]
 }
 
 // Begin 方法，返回DBTransaction对象
-func (db *DBPool) Begin(database string) *DBTransaction {
-	return db.Pool[database].Begin()
+func Begin(database string) *DBTransaction {
+	return DB.Pool[database].Begin()
 }
 
 // Select 方法，返回查询结果数组
-func (db *DBPool) Select(
+func Select(
 	database, sql string,
 	params ...interface{}) map[string]interface{} {
 
-	return db.Pool[database].Select(sql, params...)
+	return DB.Pool[database].Select(sql, params...)
 }
 
 // Update 方法，返回受影响行数
-func (db *DBPool) Update(
+func Update(
 	database, sql string,
 	params ...interface{}) int64 {
 
-	return db.Pool[database].Update(sql, params...)
+	return DB.Pool[database].Update(sql, params...)
 }
 
 // Insert 方法，返回插入id
-func (db *DBPool) Insert(
+func Insert(
 	database, sql string,
 	params ...interface{}) int64 {
 
-	return db.Pool[database].Insert(sql, params...)
+	return DB.Pool[database].Insert(sql, params...)
 }
 
 // Begin 方法，返回DBTransaction对象
