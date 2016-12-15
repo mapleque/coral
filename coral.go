@@ -612,7 +612,8 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 					return false, status
 				}
 			default:
-				Debug("param check", key, ele, value)
+				Debug("param check unexpect type",
+					key, ele, value, fmt.Sprintf("%T", ele))
 				return false, STATUS_INVALID_PARAM
 			}
 			break
@@ -626,7 +627,7 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 		case []string:
 			if len(value) < 1 {
 				Error("unexpect checker rule", key, value)
-				break
+				return false, STATUS_INVALID_PARAM
 			}
 			switch eles := params[key].(type) {
 			case []interface{}:
@@ -639,7 +640,8 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 				}
 				break
 			default:
-				Debug("param check", key, eles)
+				Debug("param check unexpect type",
+					key, eles, fmt.Sprintf("%T", eles))
 				return false, STATUS_INVALID_PARAM
 			}
 			break
@@ -647,7 +649,7 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 			// 如果是数组嵌套，那么只检查数组第一项的规则
 			if len(value) < 1 {
 				Error("unexpect checker rule", key, value)
-				break
+				return false, STATUS_INVALID_PARAM
 			}
 			switch eles := params[key].(type) {
 			case []interface{}:
@@ -662,18 +664,21 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 							return false, status
 						}
 					default:
-						Debug("param check", key, ele)
+						Debug("param check unexpect type",
+							key, ele, fmt.Sprintf("%T", ele))
 						return false, STATUS_INVALID_PARAM
 					}
 				}
 				break
 			default:
-				Debug("param check", key, eles)
+				Debug("param check unexpect type",
+					key, eles, fmt.Sprintf("%T", eles))
 				return false, STATUS_INVALID_PARAM
 			}
 			break
 		default:
-			Error("unexpect checker rule", key, value)
+			Error("unexpect checker rule", key, value, fmt.Sprintf("%T", value))
+			return false, STATUS_INVALID_PARAM
 		}
 	}
 	return true, STATUS_SUCCESS
