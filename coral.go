@@ -890,6 +890,7 @@ func checkIn(rule string, point string) bool {
 		}
 		if !ret {
 			Debug("check in faild", rule, point)
+			return false
 		}
 	}
 	return true
