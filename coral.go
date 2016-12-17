@@ -677,6 +677,17 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 					}
 				}
 				break
+			case []map[string]interface{}:
+				// 还要保证要检验的参数也是数组
+				for _, ele := range eles {
+					// 数组里边的已经是嵌套了
+					ret, status := value[0].check(ele)
+					if !ret {
+						Debug("param check", key, ele)
+						return false, status
+					}
+				}
+				break
 			default:
 				Debug("param check unexpect type",
 					key, eles, fmt.Sprintf("%T", eles))
