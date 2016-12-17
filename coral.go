@@ -354,7 +354,7 @@ func (router *Router) genHandler(filterChains ...Filter) func(http.ResponseWrite
 			for _, filter := range filterChains {
 				ret = filter(context)
 				if !ret {
-					Warn("filter break", filter)
+					Debug("filter break", filter)
 					if context.Status == 0 {
 						response.Status = STATUS_ERROR_UNKNOWN
 					}
