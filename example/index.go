@@ -59,6 +59,7 @@ func initRouter(server *coral.Server) {
 					"输出也会检查"),
 				"b": coral.Checker{
 					"c": coral.Rule("int[1,10]", 0, "")}, // 也可以省略说明
+				"opt": coral.Optional("string"),
 				"data": coral.Checker{
 					"list": []coral.Checker{
 						coral.Checker{"e": "string"}},

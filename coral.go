@@ -98,6 +98,9 @@ func Rule(rule string, status int, note string) string {
 	}
 	return ret
 }
+func Optional(rule string) string {
+	return "optional|" + rule
+}
 
 func InString(str ...string) string {
 	return "string{" + strings.Join(str, ",") + "}"
@@ -691,8 +694,15 @@ func (field Checker) check(params map[string]interface{}) (bool, int) {
 func checkRule(param interface{}, rule string) (bool, int) {
 	rules := strings.Split(rule, "|")
 	for _, singleRule := range rules {
-		if ret, status := checkSingleRule(param, singleRule); !ret {
-			return ret, status
+		if singleRule == "optional" && param == nil {
+			return true, STATUS_SUCCESS
+		}
+	}
+	for _, singleRule := range rules {
+		if singleRule != "optional" {
+			if ret, status := checkSingleRule(param, singleRule); !ret {
+				return ret, status
+			}
 		}
 	}
 	return true, STATUS_SUCCESS
