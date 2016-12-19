@@ -113,6 +113,7 @@ func (dbq *DBQuery) Select(
 	sql string,
 	params ...interface{}) []map[string]interface{} {
 
+	Debug("select sql", sql)
 	ret, err := dbq.conn.Query(sql, params...)
 	return processQueryRet(sql, ret, err)
 }
@@ -122,6 +123,7 @@ func (dbq *DBQuery) Update(
 	sql string,
 	params ...interface{}) int64 {
 
+	Debug("update sql", sql)
 	ret, err := dbq.conn.Exec(sql, params...)
 	return processUpdateRet(sql, ret, err)
 }
@@ -131,6 +133,7 @@ func (dbq *DBQuery) Insert(
 	sql string,
 	params ...interface{}) int64 {
 
+	Debug("insert sql", sql)
 	ret, err := dbq.conn.Exec(sql, params...)
 	return processInsertRet(sql, ret, err)
 }
@@ -140,6 +143,7 @@ func (dbt *DBTransaction) Select(
 	sql string,
 	params ...interface{}) []map[string]interface{} {
 
+	Debug("select sql in transaction", sql)
 	ret, err := dbt.conn.Query(sql, params...)
 	return processQueryRet(sql, ret, err)
 }
@@ -149,6 +153,7 @@ func (dbt *DBTransaction) Update(
 	sql string,
 	params ...interface{}) int64 {
 
+	Debug("update sql in transaction", sql)
 	ret, err := dbt.conn.Exec(sql, params...)
 	return processUpdateRet(sql, ret, err)
 }
@@ -158,12 +163,14 @@ func (dbt *DBTransaction) Insert(
 	sql string,
 	params ...interface{}) int64 {
 
+	Debug("insert sql in transaction", sql)
 	ret, err := dbt.conn.Exec(sql, params...)
 	return processInsertRet(sql, ret, err)
 }
 
 // Commit 方法，提交事物
 func (dbt *DBTransaction) Commit() {
+	Debug("transaction commit")
 	err := dbt.conn.Commit()
 	if err != nil {
 		Error("db transaction commit faild", dbt.database, err.Error())
@@ -172,6 +179,7 @@ func (dbt *DBTransaction) Commit() {
 
 // Rollback 方法，回滚事物
 func (dbt *DBTransaction) Rollback() {
+	Debug("transaction rollback")
 	err := dbt.conn.Rollback()
 	if err != nil {
 		Error("db transaction rollback faild", dbt.database, err.Error())
