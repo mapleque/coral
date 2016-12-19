@@ -725,8 +725,8 @@ func checkSingleRule(param interface{}, singleRule string) (bool, int) {
 	tmparr := strings.Split(singleRule, "<")
 	// 提取#后面的错误码
 	tmparr = strings.Split(tmparr[0], "#")
+	singleRule = tmparr[0]
 	if len(tmparr) > 1 {
-		singleRule = tmparr[0]
 		st, err := strconv.Atoi(tmparr[1])
 		if err != nil {
 			Debug("status not a int number", singleRule)
