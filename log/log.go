@@ -207,7 +207,7 @@ func fileIsExist(file string) bool {
 func fileSize(file string) int64 {
 	fileInfo, err := os.Stat(file)
 	if err != nil {
-		Fatal("log path config error", err.Error())
+		return int64(0)
 	}
 	return fileInfo.Size()
 }
