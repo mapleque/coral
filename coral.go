@@ -163,6 +163,12 @@ func Bool(param interface{}) bool {
 		} else {
 			return false
 		}
+	case int64:
+		if ret > 0 {
+			return true
+		} else {
+			return false
+		}
 	case string:
 		switch ret {
 		case "1", "true", "y", "on", "yes":
@@ -187,6 +193,8 @@ func String(param interface{}) string {
 		return ret
 	case int:
 		return strconv.Itoa(ret)
+	case int64:
+		return strconv.FormatInt(ret, 10)
 	case bool:
 		if ret {
 			return "1"
